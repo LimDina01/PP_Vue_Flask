@@ -1,0 +1,525 @@
+{% extends "admin/layout.html" %}
+
+{% block main_content %}
+    <div id="app" class="col-12 grid-margin">
+        <h1 class="text-center my-4">User Management</h1>
+        <button type="button" class="btn btn-primary mb-3" @click="openAddUserModal">
+            Add User
+        </button>
+        <div class="card original-card-color"> <!-- Added 'original-card-color' class -->
+            <div class="card-body">
+
+
+                <div class="table-responsive mt-3">
+                    <table class="table table-hover">
+                        <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Username</th>
+                            <th>Gender</th>
+                            <th>Role</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Address</th>
+                            <th>Profile</th>
+                            <th>Actions</th> <!-- Actions column -->
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% raw %}
+                        <tr v-for="(user, index) in users" :key="user.id">
+                            <td>{{ index + 1 }}</td>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.gender }}</td>
+                            <td>{{ user.role }}</td>
+                            <td>{{ user.phone }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.address }}</td>
+                            <td>
+                                <img :src="'/static/admin/assets/images/profile/' + user.profile_pic"
+                                     class="profile-image" alt="Profile image">
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-warning me-2" @click="openEditUserModal(user)">
+                                    <i class="fas fa-edit"></i>Edit
+                                </button>
+                                <button class="btn btn-sm btn-danger" @click="deleteUser(user)">
+                                    <i class="fas fa-trash-alt"></i>Delete
+                                </button>
+                            </td>
+                        </tr>
+
+                        <tr v-if="users.length === 0">
+                            <td colspan="9" class="text-center">No users found.</td>
+                        </tr>
+                        {% endraw %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for adding/updating user -->
+        {% raw %}
+        <div v-if="showUserModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog ">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title font-weight-bold w-100 text-center py-2" style="font-size: 1.5rem;">{{
+                            isEditMode ? 'Update User' : 'Add New User' }}</h5>
+                    </div>
+                    <div class="modal-body">
+                        <form @submit.prevent="isEditMode ? updateUser() : addUser()" enctype="multipart/form-data">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="profilePic" class="form-label">Profile Picture</label>
+                                        <input type="file" @change="handleFileUpload" class="form-control"
+                                               accept="image/*">
+
+                                        <!-- Image Preview for Add/Edit -->
+                                        <div v-if="userForm.profilePicPreview" class="mt-2">
+                                            <img :src="userForm.profilePicPreview" class="profile-image-preview"
+                                                 alt="Profile Image Preview">
+                                        </div>
+
+                                        <!-- Existing Profile Picture in Edit Mode -->
+                                        <div v-if="isEditMode && userToEdit.profile_pic && !userForm.profilePicPreview"
+                                             class="mt-2">
+                                            <img :src="'/static/admin/assets/images/profile/' + userToEdit.profile_pic"
+                                                 class="profile-image-preview" alt="Current Profile Image">
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="username" class="form-label">Username</label>
+                                        <input type="text" v-model="userForm.username" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="gender" class="form-label">Gender</label>
+                                        <select v-model="userForm.gender" class="form-select" required>
+                                            <option value="">Select Gender</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="phone" class="form-label">Phone</label>
+                                        <input type="text" v-model="userForm.phone" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="role" class="form-label">Role</label>
+                                        <select v-model="userForm.role" class="form-select" required>
+                                            <option value="">Select Role</option>
+                                            <option value="Admin">Admin</option>
+                                            <option value="Customer">Customer</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email</label>
+                                        <input type="email" v-model="userForm.email" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="address" class="form-label">Address</label>
+                                        <textarea v-model="userForm.address" class="form-control"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-end justify-content-between">
+                                <button type="button" class="btn btn-secondary me-2" @click="closeUserModal">Cancel
+                                </button>
+                                <button type="submit" class="btn btn-primary">{{ isEditMode ? 'Update User' : 'Add User'
+                                    }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endraw %}
+    </div>
+
+    <!-- Include Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- Include SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Include SweetAlert2 Dark Theme -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.css">
+    <!-- Include Font Awesome for Icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <style>
+        /* Updated CSS for normal profile images */
+        .profile-image {
+            max-width: 100px; /* Adjust as needed */
+            max-height: 100px; /* Limit the height */
+            object-fit: cover;
+            /* Removed border-radius to display as normal images */
+        }
+
+        .profile-image-preview {
+            max-width: 200px; /* Increased size for better visibility */
+            max-height: 200px;
+            object-fit: cover;
+            /* Removed border-radius to display as normal images */
+        }
+
+
+        .form-select {
+            background-color: #343a40;
+            color: #ffffff !important;
+            border: 1px solid #495057;
+            padding: 10px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+
+        .form-control {
+            background-color: #343a40; /* Dark background */
+            color: #ffffff; /* Black text */
+            border: 1px solid #495057; /* Darker border */
+            padding: 10px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            background-color: #23272b; /* Slightly darker background on focus */
+            border-color: #6c757d; /* Lighter border when focused */
+            outline: none; /* Remove default outline */
+        }
+
+        .modal-content {
+            background-color: #1a1c24;
+
+        }
+
+
+        .modal-title {
+            font-weight: bold;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+
+
+    </style>
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    users: [],  // Array to hold users fetched from API
+                    showUserModal: false,  // Modal toggle
+                    isEditMode: false,  // Flag to determine if modal is in edit mode
+                    userForm: {  // Form data for add/edit
+                        id: null,  // Only used in edit mode
+                        profilePic: '',
+                        profilePicPreview: '',  // For image preview
+                        username: '',
+                        gender: '',
+                        role: '',
+                        phone: '',
+                        email: '',
+                        address: ''
+                    },
+                    userToEdit: null  // Holds the user being edited
+                }
+            },
+            created() {
+                // Fetch users when the component is created
+                this.fetchUsers();
+            },
+            methods: {
+                fetchUsers() {
+                    fetch('/api/users')
+                        .then(response => response.json())
+                        .then(data => {
+                            this.users = data;
+                            console.log(this.users); // Populate users from API
+                        })
+                        .catch(error => {
+                            console.error('Error fetching users:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Failed to fetch users.'
+                            });
+                        });
+                },
+                openAddUserModal() {
+                    this.isEditMode = false;
+                    this.resetUserForm();
+                    this.showUserModal = true;
+                },
+                openEditUserModal(user) {
+                    this.isEditMode = true;
+                    this.userToEdit = user;
+                    this.userForm = {
+                        id: user.id,  // Assuming each user has a unique 'id'
+                        profilePic: '',  // Reset profilePic; handle separately
+                        profilePicPreview: '',  // Reset preview
+                        username: user.username,
+                        gender: user.gender,
+                        role: user.role,
+                        phone: user.phone,
+                        email: user.email,
+                        address: user.address
+                    };
+                    this.showUserModal = true;
+                },
+                closeUserModal() {
+                    this.showUserModal = false;
+                    this.resetUserForm();
+                },
+                addUser() {
+                    const formData = new FormData();
+                    formData.append('profilePic', this.userForm.profilePic);
+                    formData.append('username', this.userForm.username);
+                    formData.append('gender', this.userForm.gender);
+                    formData.append('role', this.userForm.role);
+                    formData.append('phone', this.userForm.phone);
+                    formData.append('email', this.userForm.email);
+                    formData.append('address', this.userForm.address);
+
+                    fetch('/api/users', {
+                        method: 'POST',
+                        body: formData
+                        // Send form data with file
+                    })
+                        .then(response => {
+                            if (response.ok) {
+                                return response.json(); // Return the response data
+                            } else {
+                                return response.json().then(err => {
+                                    throw err;
+                                });
+                            }
+                        })
+                        .then(newUser => {
+                            // If the new user is returned from the server, add it to the users array
+                            this.users.push(newUser); // Update the local users array
+                            this.showUserModal = false;  // Close modal
+                            this.resetUserForm();  // Reset the form
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'User added successfully!',
+                                showConfirmButton: false,
+                                timer: 1500,
+                                customClass: {
+                                    popup: 'swal2-dark'
+                                }
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Failed to add user.',
+                                text: error.error || 'An error occurred while adding the user.',
+                                customClass: {
+                                    popup: 'swal2-dark'
+                                }
+                            });
+                        });
+                },
+                updateUser() {
+                    if (!this.userForm.id) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'User ID is missing.',
+                            customClass: {
+                                popup: 'swal2-dark'
+                            }
+                        });
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    if (this.userForm.profilePic) {
+                        formData.append('profilePic', this.userForm.profilePic);
+                    }
+                    formData.append('username', this.userForm.username);
+                    formData.append('gender', this.userForm.gender);
+                    formData.append('role', this.userForm.role);
+                    formData.append('phone', this.userForm.phone);
+                    formData.append('email', this.userForm.email);
+                    formData.append('address', this.userForm.address);
+
+                    fetch(`/api/users/${this.userForm.id}`, {
+                        method: 'PUT',
+                        body: formData
+                        // Send form data with file if updated
+                    })
+                        .then(response => {
+                            if (response.ok) {
+                                return response.json(); // Return the updated user data
+                            } else {
+                                return response.json().then(err => {
+                                    throw err;
+                                });
+                            }
+                        })
+                        .then(updatedUser => {
+                            // Find the index of the updated user in the users array
+                            const index = this.users.findIndex(user => user.id === updatedUser.id);
+                            if (index !== -1) {
+                                // Replace the old user data with the updated data
+                                this.$set(this.users, index, updatedUser);
+                            }
+                            this.showUserModal = false;  // Close modal
+                            this.resetUserForm();  // Reset the form
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'User updated successfully!',
+                                showConfirmButton: false,
+                                timer: 1500,
+                                customClass: {
+                                    popup: 'swal2-dark'
+                                }
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Failed to update user.',
+                                text: error.error || 'An error occurred while updating the user.',
+                                customClass: {
+                                    popup: 'swal2-dark'
+                                }
+                            });
+                        });
+                },
+                deleteUser(user) {
+                    Swal.fire({
+                        title: `Are you sure you want to delete "${user.username}"?`,
+                        text: "This action cannot be undone.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Yes, delete it!',
+                        customClass: {
+                            popup: 'swal2-dark'
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            fetch(`/api/users/${user.id}`, {
+                                method: 'DELETE'
+                            })
+                                .then(response => {
+                                    if (response.ok) {
+                                        // Remove the user from the users array
+                                        this.users = this.users.filter(u => u.id !== user.id);
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'User deleted successfully!',
+                                            showConfirmButton: false,
+                                            timer: 1500,
+                                            customClass: {
+                                                popup: 'swal2-dark'
+                                            }
+                                        });
+                                    } else {
+                                        return response.json().then(err => {
+                                            throw err;
+                                        });
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error:', error);
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Failed to delete user.',
+                                        text: error.error || 'An error occurred while deleting the user.',
+                                        customClass: {
+                                            popup: 'swal2-dark'
+                                        }
+                                    });
+                                });
+                        }
+                    });
+                },
+                handleFileUpload(event) {
+                    const file = event.target.files[0]; // Get the selected file
+                    if (file) {
+                        // Limit file size to 2MB (adjust as needed)
+                        const maxSize = 2 * 1024 * 1024; // 2MB
+                        if (file.size > maxSize) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'File Too Large',
+                                text: 'Image size should not exceed 2MB.',
+                                customClass: {
+                                    popup: 'swal2-dark'
+                                }
+                            });
+                            event.target.value = ''; // Reset the file input
+                            this.userForm.profilePic = '';
+                            this.userForm.profilePicPreview = '';
+                            return;
+                        }
+
+                        // Validate file type
+                        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                        if (!allowedTypes.includes(file.type)) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Invalid File Type',
+                                text: 'Only JPG, PNG, and GIF files are allowed.',
+                                customClass: {
+                                    popup: 'swal2-dark'
+                                }
+                            });
+                            event.target.value = ''; // Reset the file input
+                            this.userForm.profilePic = '';
+                            this.userForm.profilePicPreview = '';
+                            return;
+                        }
+
+                        this.userForm.profilePic = file; // Store the new image
+
+                        // Generate a new preview and reset the old preview
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            this.userForm.profilePicPreview = e.target.result; // Show new preview
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        // Reset if no file selected
+                        this.userForm.profilePic = '';
+                        this.userForm.profilePicPreview = '';
+                    }
+                },
+                resetUserForm() {
+                    // Reset user form fields
+                    this.userForm = {
+                        id: null,
+                        profilePic: '',
+                        profilePicPreview: '',
+                        username: '',
+                        gender: '',
+                        role: '',
+                        phone: '',
+                        email: '',
+                        address: ''
+                    };
+                    this.userToEdit = null;
+                }
+            }
+
+        });
+    </script>
+{% endblock %}

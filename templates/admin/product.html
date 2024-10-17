@@ -1,0 +1,420 @@
+{% extends "admin/layout.html" %}
+
+{% block main_content %}
+    <div id="app">
+        <div class="container">
+            <h1 class="text-center my-4">Product Management</h1>
+
+            <button @click="openAddProductModal" class="btn btn-primary mb-3">Add Product</button>
+
+            <table class="table table-bordered">
+                <thead class="thead-dark">
+                <tr>
+                    <th scope="col">No.</th>
+                    <th scope="col">Product Code</th>
+                    <th scope="col">Product Name</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Cost</th>
+                    <th scope="col">Price</th>
+                    <th scope="col">Current Stock</th>
+                    <th scope="col">Image</th>
+                    <th scope="col">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="(product, index) in products" :key="product.id">
+                    <td>[[ index + 1 ]]</td>
+                    <td>[[ product.product_code ]]</td>
+                    <td>[[ product.product_name ]]</td>
+                    <td>[[ getCategoryName(product.category_id) ]]</td>
+                    <td>[[ product.cost ]]</td>
+                    <td>[[ product.price ]]</td>
+                    <td>[[ product.current_stock ]]</td>
+                    <td>
+                        <img :src="'/static/admin/assets/images/product_img/' + product.image"
+                             class="profile-image" alt="Product image" style="max-height: 100px; max-width: 100px;">
+                    </td>
+                    <td>
+                        <button @click="openEditProductModal(product)" class="btn btn-sm btn-warning">Edit</button>
+                        <button @click="deleteProduct(product)" class="btn btn-sm btn-danger">Delete</button>
+                    </td>
+                </tr>
+                <tr v-if="products.length === 0">
+                    <td colspan="9" class="text-center">No products found.</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <!-- Modal for Add/Edit Product -->
+            <div v-if="showProductModal" class="modal-backdrop">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title font-weight-bold w-100 text-center py-2" style="font-size: 1.5rem;">[[
+                            isEditMode ? 'Edit Product' : 'Add Product' ]]</h5>
+                    </div>
+                    <div class="form-group">
+                        <label for="productImage">Image</label>
+                        <input type="file" class="form-control" @change="handleFileUpload" accept="image/*">
+                    </div>
+                    <div v-if="productForm.imagePreview" class="mb-4">
+                        <img :src="productForm.imagePreview" alt="Image Preview" style="max-height: 100px; max-width: 100%">
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="productCode">Product Code</label>
+                            <input type="text" class="form-control" v-model="productForm.product_code"
+                                   placeholder="Enter product code" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="productName">Product Name</label>
+                            <input type="text" class="form-control" v-model="productForm.product_name"
+                                   placeholder="Enter product name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="categoryName">Category</label>
+                            <select v-model="productForm.category_id" class="form-control" required>
+                                <option disabled value="">Select Category</option>
+                                <option v-for="category in categories" :key="category.id" :value="category.id">
+                                    [[ category.name ]]
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cost">Cost</label>
+                            <input type="number" class="form-control" v-model="productForm.cost"
+                                   placeholder="Enter cost" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="price">Price</label>
+                            <input type="number" class="form-control" v-model="productForm.price"
+                                   placeholder="Enter price" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="currentStock">Current Stock</label>
+                            <input type="number" class="form-control" v-model="productForm.current_stock"
+                                   placeholder="Enter current stock" required>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary align-left" @click="closeProductModal">Close
+                        </button>
+
+                        <button type="button" class="btn btn-primary"
+                                @click="isEditMode ? updateProduct() : addProduct()">
+                            [[ isEditMode ? 'Update Product' : 'Add Product' ]]
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- Include SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Include SweetAlert2 Dark Theme -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.css">
+    <!-- Include Font Awesome for Icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
+    <!-- Custom CSS for modal and table -->
+    <style>
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-content {
+            background-color: #1a1c24;
+            padding: 20px;
+            border-radius: 5px;
+            width: 500px;
+            max-width: 90%;
+            max-height: 80vh; /* Set a max height for the modal */
+            overflow-y: auto; /* Enable vertical scrolling */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close {
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+        }
+
+        .thead-dark th {
+            background-color: #343a40;
+            color: white;
+        }
+
+        .form-control {
+            background-color: #343a40; /* Dark background */
+            color: #ffffff; /* Black text */
+            border: 1px solid #495057; /* Darker border */
+            padding: 10px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            background-color: #23272b; /* Slightly darker background on focus */
+            border-color: #6c757d; /* Lighter border when focused */
+            outline: none; /* Remove default outline */
+        }
+
+        .modal-content::-webkit-scrollbar {
+            display: none; /* Hide scrollbar for Webkit browsers */
+        }
+    </style>
+
+    <script>
+        new Vue({
+            el: '#app',
+            delimiters: ['[[', ']]'],  // Change delimiters to avoid conflict
+            data() {
+                return {
+                    products: [],  // Array to hold products fetched from API
+                    categories: [],  // Array to hold categories fetched from API
+                    showProductModal: false,  // Modal toggle
+                    isEditMode: false,  // Flag to determine if modal is in edit mode
+                    productForm: {  // Form data for add/edit
+                        id: null,  // Only used in edit mode
+                        product_code: '',
+                        product_name: '',
+                        category_id: '',
+                        cost: null,
+                        price: null,
+                        current_stock: null,
+                        image: null,  // For storing image file
+                        imagePreview: null // For storing image preview URL
+                    }
+                }
+            },
+            created() {
+                // Fetch products and categories when the component is created
+                this.fetchProducts();
+                this.fetchCategories();
+            },
+            methods: {
+                fetchProducts() {
+                    fetch('/api/products')
+                        .then(response => response.json())
+                        .then(data => {
+                            this.products = data;
+                            console.log(this.products); // Populate products from API
+                        })
+                        .catch(error => {
+                            console.error('Error fetching products:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Failed to fetch products.',
+                                customClass: {
+                                    container: 'my-swal'
+                                }
+                            });
+                        });
+                },
+                fetchCategories() {
+                    fetch('/api/categories')
+                        .then(response => response.json())
+                        .then(data => {
+                            this.categories = data;
+                            console.log(this.categories); // Populate categories from API
+                        })
+                        .catch(error => {
+                            console.error('Error fetching categories:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Failed to fetch categories.',
+                                customClass: {
+                                    container: 'my-swal'
+                                }
+                            });
+                        });
+                },
+                getCategoryName(categoryId) {
+                    const category = this.categories.find(c => c.id === categoryId);
+                    return category ? category.name : 'Unknown'; // Return category name based on ID
+                },
+                openAddProductModal() {
+                    this.productForm = {  // Reset form for adding a product
+                        id: null,
+                        product_code: '',
+                        product_name: '',
+                        category_id: '',
+                        cost: null,
+                        price: null,
+                        current_stock: null,
+                        image: null,
+                        imagePreview: null
+                    };
+                    this.showProductModal = true; // Show modal
+                    this.isEditMode = false; // Set to add mode
+                },
+                openEditProductModal(product) {
+                    this.productForm = {  // Fill form for editing
+                        id: product.id,
+                        product_code: product.product_code,
+                        product_name: product.product_name,
+                        category_id: product.category_id,
+                        cost: product.cost,
+                        price: product.price,
+                        current_stock: product.current_stock,
+                        image: null,
+                        imagePreview: null
+                    };
+                    this.showProductModal = true; // Show modal
+                    this.isEditMode = true; // Set to edit mode
+                },
+                closeProductModal() {
+                    this.showProductModal = false; // Hide modal
+                },
+                handleFileUpload(event) {
+                    const file = event.target.files[0]; // Get the uploaded file
+                    this.productForm.image = file; // Store file in the form data
+                    this.productForm.imagePreview = URL.createObjectURL(file); // Create a preview URL
+                },
+                addProduct() {
+                    const formData = new FormData(); // Create a new FormData object
+                    Object.entries(this.productForm).forEach(([key, value]) => {
+                        formData.append(key, value); // Append form data
+                    });
+
+                    fetch('/api/products', {
+                        method: 'POST',
+                        body: formData // Send form data
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            this.closeProductModal(); // Close modal on success
+                            this.fetchProducts(); // Refresh products
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: 'Product added successfully!',
+                                customClass: {
+                                    container: 'my-swal'
+                                }
+                            });
+                        } else {
+                            throw new Error('Failed to add product.'); // Handle error
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error adding product:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to add product.',
+                            customClass: {
+                                container: 'my-swal'
+                            }
+                        });
+                    });
+                },
+                updateProduct() {
+                    const formData = new FormData(); // Create a new FormData object
+                    Object.entries(this.productForm).forEach(([key, value]) => {
+                        formData.append(key, value); // Append form data
+                    });
+
+                    fetch(`/api/products/${this.productForm.id}`, {
+                        method: 'PUT',
+                        body: formData // Send form data
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            this.closeProductModal(); // Close modal on success
+                            this.fetchProducts(); // Refresh products
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: 'Product updated successfully!',
+                                customClass: {
+                                    container: 'my-swal'
+                                }
+                            });
+                        } else {
+                            throw new Error('Failed to update product.'); // Handle error
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error updating product:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to update product.',
+                            customClass: {
+                                container: 'my-swal'
+                            }
+                        });
+                    });
+                },
+                deleteProduct(product) {
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: `You won't be able to revert this!`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, delete it!',
+                        customClass: {
+                            container: 'my-swal'
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            fetch(`/api/products/${product.id}`, {
+                                method: 'DELETE'
+                            })
+                            .then(response => {
+                                if (response.ok) {
+                                    this.fetchProducts(); // Refresh products
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Deleted!',
+                                        text: 'Product has been deleted.',
+                                        customClass: {
+                                            container: 'my-swal'
+                                        }
+                                    });
+                                } else {
+                                    throw new Error('Failed to delete product.'); // Handle error
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error deleting product:', error);
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Failed to delete product.',
+                                    customClass: {
+                                        container: 'my-swal'
+                                    }
+                                });
+                            });
+                        }
+                    });
+                }
+            }
+        });
+    </script>
+{% endblock %}
