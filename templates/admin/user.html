@@ -36,7 +36,7 @@
                             <td>{{ user.email }}</td>
                             <td>{{ user.address }}</td>
                             <td>
-                                <img :src="'/static/admin/assets/images/profile/' + user.profile_pic"
+                                <img :src="'/static/admin/assets/images/main_img/' + user.profile_pic"
                                      class="profile-image" alt="Profile image">
                             </td>
                             <td>
@@ -86,7 +86,7 @@
                                         <!-- Existing Profile Picture in Edit Mode -->
                                         <div v-if="isEditMode && userToEdit.profile_pic && !userForm.profilePicPreview"
                                              class="mt-2">
-                                            <img :src="'/static/admin/assets/images/profile/' + userToEdit.profile_pic"
+                                            <img :src="'/static/admin/assets/images/main_img/' + userToEdit.profile_pic"
                                                  class="profile-image-preview" alt="Current Profile Image">
                                         </div>
                                     </div>
@@ -148,13 +148,12 @@
     <!-- Include Vue.js -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
     <!-- Include SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Include SweetAlert2 Dark Theme -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>    <!-- Include SweetAlert2 Dark Theme -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.css">
     <!-- Include Font Awesome for Icons -->
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <style>
-        /* Updated CSS for normal profile images */
+        /* Updated CSS for normal main_img images */
         .profile-image {
             max-width: 100px; /* Adjust as needed */
             max-height: 100px; /* Limit the height */

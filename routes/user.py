@@ -6,10 +6,10 @@ import uuid
 import datetime
 
 # Configuration
-app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'static', 'admin', 'assets', 'images', 'profile')
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'static', 'admin', 'assets', 'images', 'main_img')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limit file size to 16 MB
 
-# Allowed extensions for profile pictures
+# Allowed extensions for main_img pictures
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 
@@ -58,14 +58,14 @@ def add_user():
     if User.query.filter_by(email=email).first():
         return jsonify({'error': 'Email already exists.'}), 400
 
-    # Handle profile picture
+    # Handle main_img picture
     profile_pic = request.files.get('profilePic')
-    profile_pic_filename = 'default.png'  # Default profile picture
+    profile_pic_filename = 'default.png'  # Default main_img picture
 
     if profile_pic and allowed_file(profile_pic.filename):
         profile_pic_filename = save_profile_pic(profile_pic)
     elif profile_pic:
-        return jsonify({'error': 'Invalid file type for profile picture.'}), 400
+        return jsonify({'error': 'Invalid file type for main_img picture.'}), 400
 
     # Create the new user instance
     new_user = User(
@@ -129,17 +129,17 @@ def update_user(user_id):
     user.email = email
     user.address = address
 
-    # Handle profile picture
+    # Handle main_img picture
     profile_pic = request.files.get('profilePic')
     if profile_pic:
         if allowed_file(profile_pic.filename):
-            # Delete old profile picture if it's not the default
+            # Delete old main_img picture if it's not the default
             if user.profile_pic and user.profile_pic != 'default.png':
                 delete_profile_pic(user.profile_pic)
-            # Save new profile picture
+            # Save new main_img picture
             user.profile_pic = save_profile_pic(profile_pic)
         else:
-            return jsonify({'error': 'Invalid file type for profile picture.'}), 400
+            return jsonify({'error': 'Invalid file type for main_img picture.'}), 400
 
     try:
         db.session.commit()
@@ -167,7 +167,7 @@ def delete_user(user_id):
         return jsonify({'error': 'User not found.'}), 404
 
     try:
-        # Delete profile picture if it's not the default
+        # Delete main_img picture if it's not the default
         if user.profile_pic and user.profile_pic != 'default.png':
             delete_profile_pic(user.profile_pic)
 
@@ -187,7 +187,7 @@ def allowed_file(filename):
 
 
 def save_profile_pic(file):
-    """Save the uploaded profile picture and return the filename."""
+    """Save the uploaded main_img picture and return the filename."""
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
 
@@ -207,7 +207,7 @@ def save_profile_pic(file):
 
 
 def delete_profile_pic(filename):
-    """Delete a profile picture file from the upload folder."""
+    """Delete a main_img picture file from the upload folder."""
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     if os.path.exists(file_path):
         os.remove(file_path)
