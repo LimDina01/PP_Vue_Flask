@@ -34,8 +34,8 @@
                             <td>{{ user.email }}</td>
                             <td>{{ user.address }}</td>
                             <td>
-                                <img :src="'/static/admin/assets/images/main_img/' + user.profile_pic"
-                                     class="profile-image" alt="Profile image">
+                                <img :src="'/static/admin/assets/images/sub_img/' + user.profile_pic"
+                                     class="profile-image" alt="Profile image" @click="showFullImage(user.profile_pic)">
                             </td>
                             <td>
                                 <button class="btn btn-sm btn-warning me-2" @click="openEditUserModal(user)">
@@ -141,6 +141,38 @@
             </div>
         </div>
         {% endraw %}
+
+        <div v-if="showCropperModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Crop Image</h5>
+                    </div>
+                    <div class="modal-body">
+                        <img id="image-to-crop" :src="userForm.profilePicPreview" alt="Image to crop">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @click="closeCropperModal">Cancel</button>
+                        <button type="button" class="btn btn-primary" @click="cropImage">Crop</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for displaying full-size image -->
+        <div v-if="showImageModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Full Image</h5>
+                        <button type="button" class="btn-close" @click="closeImageModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <img :src="'/static/admin/assets/images/main_img/' + currentImage" class="img-fluid" alt="Full Image">
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Include Vue.js -->
@@ -193,6 +225,10 @@
             font-size: 1.5rem;
             line-height: 1;
         }
+
+        /* .profile-image:hover {
+            content: url('/static/admin/assets/images/main_img/' + user.profile_pic);
+        } */
     </style>
     <script>
         new Vue({
@@ -213,7 +249,10 @@
                         email: '',
                         address: ''
                     },
-                    userToEdit: null
+                    userToEdit: null,
+                    showCropperModal: false,
+                    showImageModal: false,
+                    currentImage: ''
                 }
             },
             created() {
@@ -464,6 +503,7 @@
                         const reader = new FileReader();
                         reader.onload = e => {
                             this.userForm.profilePicPreview = e.target.result;
+                            this.openCropperModal();
                         };
                         reader.readAsDataURL(file);
                     } else {
@@ -484,8 +524,62 @@
                         address: ''
                     };
                     this.userToEdit = null;
+                },
+                openCropperModal() {
+                    this.showCropperModal = true;
+                    this.$nextTick(() => {
+                        const image = document.getElementById('image-to-crop');
+                        if (image) {
+                            this.cropper = new Cropper(image, {
+                                aspectRatio: 1,
+                                viewMode: 1,
+                            });
+                        } else {
+                            console.error('Image element not found for cropping.');
+                        }
+                    });
+                },
+                cropImage() {
+                    if (this.cropper) {
+                        const canvas = this.cropper.getCroppedCanvas();
+                        this.userForm.profilePicPreview = canvas.toDataURL();
+                        
+                        canvas.toBlob((blob) => {
+                            // Create a new File object with a proper filename
+                            const originalFileName = this.userForm.profilePic.name;
+                            const fileExtension = originalFileName.split('.').pop();
+                            const newFileName = `cropped_${originalFileName}`;
+                            
+                            const croppedFile = new File([blob], newFileName, { 
+                                type: `image/${fileExtension}`,
+                                lastModified: new Date().getTime()
+                            });
+                            
+                            this.userForm.profilePic = croppedFile;
+                            this.closeCropperModal();
+                        }, 'image/jpeg', 0.9); // Specify JPEG format with 90% quality
+                    }
+                },
+                closeCropperModal() {
+                    if (this.cropper) {
+                        this.cropper.destroy();
+                        this.cropper = null;
+                    }
+                    this.showCropperModal = false;
+                },
+                showFullImage(image) {
+                    this.currentImage = image;
+                    this.showImageModal = true;
+                },
+                closeImageModal() {
+                    this.showImageModal = false;
+                    this.currentImage = '';
                 }
             }
         });
     </script>
+    <!-- Add Cropper.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <!-- Add Cropper.js JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
 {% endblock %}

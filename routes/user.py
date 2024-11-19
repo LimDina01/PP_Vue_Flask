@@ -5,6 +5,7 @@ import os
 from werkzeug.utils import secure_filename
 import uuid
 import datetime
+from PIL import Image
 
 # Configuration
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'static', 'admin', 'assets', 'images', 'main_img')
@@ -150,12 +151,27 @@ def save_profile_pic(file):
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
 
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    ext = file.filename.rsplit('.', 1)[1].lower()
-    unique_filename = f"{timestamp}_{uuid.uuid4().hex}.{ext}"
-    filename = secure_filename(unique_filename)
+    sub_img_folder = os.path.join(os.getcwd(), 'static', 'admin', 'assets', 'images', 'sub_img')
+    if not os.path.exists(sub_img_folder):
+        os.makedirs(sub_img_folder)
 
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    # Generate unique filename
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    original_filename = secure_filename(file.filename)
+    ext = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else 'jpg'
+    unique_filename = f"{timestamp}_{uuid.uuid4().hex}.{ext}"
+
+    # Save main image
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
     file.save(file_path)
 
-    return filename
+    # Create thumbnail for sub_img
+    with Image.open(file_path) as img:
+        # Save thumbnail
+        sub_img_path = os.path.join(sub_img_folder, unique_filename)
+        # Create a copy before saving to avoid potential closed file issues
+        img_copy = img.copy()
+        img_copy.thumbnail((100, 100))  # Adjust size as needed
+        img_copy.save(sub_img_path, optimize=True, quality=70)
+
+    return unique_filename
