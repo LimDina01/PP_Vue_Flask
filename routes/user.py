@@ -1,5 +1,6 @@
-from flask import render_template, request, jsonify
-from app import app, db  # Import db from app
+from flask import request, jsonify
+from app import app
+from sqlalchemy import create_engine, text
 import os
 from werkzeug.utils import secure_filename
 import uuid
@@ -12,202 +13,149 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limit file size to 16 MB
 # Allowed extensions for main_img pictures
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-
-class User(db.Model):
-    __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), nullable=False)
-    gender = db.Column(db.String(10))
-    role = db.Column(db.String(20))
-    phone = db.Column(db.String(15))
-    email = db.Column(db.String(120), nullable=False, unique=True)
-    address = db.Column(db.String(255))
-    profile_pic = db.Column(db.String(255), default='default.png')  # Store only the filename
-
+# Create a database engine
+engine = create_engine("mysql+mysqlconnector://root:@127.0.0.1/ppflask")
 
 @app.route('/api/users', methods=['GET'])
 def get_users():
-    users = User.query.all()
-    return jsonify([{
-        'id': user.id,
-        'username': user.username,
-        'gender': user.gender,
-        'role': user.role,
-        'phone': user.phone,
-        'email': user.email,
-        'address': user.address,
-        'profile_pic': user.profile_pic
-    } for user in users])
-
+    with engine.connect() as connection:
+        result = connection.execute(text("SELECT * FROM users"))
+        data = result.fetchall()
+        user_list = [
+            {
+                'id': item[0],
+                'username': item[1],
+                'gender': item[2],
+                'role': item[3],
+                'phone': item[4],
+                'email': item[5],
+                'address': item[6],
+                'profile_pic': item[7]
+            }
+            for item in data
+        ]
+    return jsonify(user_list)
 
 @app.route('/api/users', methods=['POST'])
 def add_user():
-    data = request.form
-    username = data.get('username')
-    gender = data.get('gender')
-    role = data.get('role')
-    phone = data.get('phone')
-    email = data.get('email')
-    address = data.get('address')
+    # Check if the request contains the file part
+    if 'profilePic' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['profilePic']
+    if file and allowed_file(file.filename):
+        profile_pic_filename = save_profile_pic(file)
+    else:
+        profile_pic_filename = 'default.png'
+
+    # Extract other form data
+    username = request.form.get('username')
+    gender = request.form.get('gender')
+    role = request.form.get('role')
+    phone = request.form.get('phone')
+    email = request.form.get('email')
+    address = request.form.get('address')
 
     # Validate required fields
     if not username or not email:
         return jsonify({'error': 'Username and Email are required fields.'}), 400
 
-    # Check if email already exists
-    if User.query.filter_by(email=email).first():
-        return jsonify({'error': 'Email already exists.'}), 400
+    query = text("""
+        INSERT INTO `users` (username, gender, phone, email, role, address, profile_pic)
+        VALUES (:username, :gender, :phone, :email, :role, :address, :profile_pic)
+    """)
 
-    # Handle main_img picture
-    profile_pic = request.files.get('profilePic')
-    profile_pic_filename = 'default.png'  # Default main_img picture
+    with engine.connect() as connection:
+        result = connection.execute(query, {
+            'username': username,
+            'gender': gender,
+            'phone': phone,
+            'email': email,
+            'role': role,
+            'address': address,
+            'profile_pic': profile_pic_filename
+        })
+        connection.commit()
 
-    if profile_pic and allowed_file(profile_pic.filename):
-        profile_pic_filename = save_profile_pic(profile_pic)
-    elif profile_pic:
-        return jsonify({'error': 'Invalid file type for main_img picture.'}), 400
+        # Fetch the newly created user
+        new_user_id = result.lastrowid
+        new_user = connection.execute(text("SELECT * FROM users WHERE id = :id"), {'id': new_user_id}).fetchone()
 
-    # Create the new user instance
-    new_user = User(
-        username=username,
-        gender=gender,
-        role=role,
-        phone=phone,
-        email=email,
-        address=address,
-        profile_pic=profile_pic_filename  # Store only the filename
-    )
-
-    try:
-        db.session.add(new_user)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': 'Failed to add user.', 'details': str(e)}), 500
-
-    return jsonify({
-        'id': new_user.id,
-        'username': new_user.username,
-        'gender': new_user.gender,
-        'role': new_user.role,
-        'phone': new_user.phone,
-        'email': new_user.email,
-        'address': new_user.address,
-        'profile_pic': new_user.profile_pic,
-        'message': 'User added successfully!'
-    }), 201
-
+    return jsonify(dict(new_user._mapping)), 201
 
 @app.route('/api/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({'error': 'User not found.'}), 404
+    # Check if the request contains the file part
+    file = request.files.get('profilePic')
+    if file and allowed_file(file.filename):
+        profile_pic_filename = save_profile_pic(file)
+    else:
+        # Fetch the current profile picture from the database if no new file is uploaded
+        with engine.connect() as connection:
+            current_user = connection.execute(text("SELECT profile_pic FROM users WHERE id = :id"), {'id': user_id}).fetchone()
+            profile_pic_filename = current_user._mapping['profile_pic'] if current_user else 'default.png'
 
-    data = request.form
-    username = data.get('username')
-    gender = data.get('gender')
-    role = data.get('role')
-    phone = data.get('phone')
-    email = data.get('email')
-    address = data.get('address')
+    # Extract other form data
+    username = request.form.get('username')
+    gender = request.form.get('gender')
+    role = request.form.get('role')
+    phone = request.form.get('phone')
+    email = request.form.get('email')
+    address = request.form.get('address')
 
     # Validate required fields
     if not username or not email:
         return jsonify({'error': 'Username and Email are required fields.'}), 400
 
-    # Check if email is being updated to an existing email
-    existing_user = User.query.filter_by(email=email).first()
-    if existing_user and existing_user.id != user.id:
-        return jsonify({'error': 'Email already exists.'}), 400
+    query = text("""
+        UPDATE `users`
+        SET username = :username, gender = :gender, phone = :phone, email = :email, role = :role, address = :address, profile_pic = :profile_pic
+        WHERE id = :user_id
+    """)
 
-    # Update fields
-    user.username = username
-    user.gender = gender
-    user.role = role
-    user.phone = phone
-    user.email = email
-    user.address = address
+    with engine.connect() as connection:
+        connection.execute(query, {
+            'username': username,
+            'gender': gender,
+            'phone': phone,
+            'email': email,
+            'role': role,
+            'address': address,
+            'profile_pic': profile_pic_filename,
+            'user_id': user_id
+        })
+        connection.commit()
 
-    # Handle main_img picture
-    profile_pic = request.files.get('profilePic')
-    if profile_pic:
-        if allowed_file(profile_pic.filename):
-            # Delete old main_img picture if it's not the default
-            if user.profile_pic and user.profile_pic != 'default.png':
-                delete_profile_pic(user.profile_pic)
-            # Save new main_img picture
-            user.profile_pic = save_profile_pic(profile_pic)
-        else:
-            return jsonify({'error': 'Invalid file type for main_img picture.'}), 400
+        # Fetch the updated user
+        updated_user = connection.execute(text("SELECT * FROM users WHERE id = :id"), {'id': user_id}).fetchone()
 
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': 'Failed to update user.', 'details': str(e)}), 500
-
-    return jsonify({
-        'id': user.id,
-        'username': user.username,
-        'gender': user.gender,
-        'role': user.role,
-        'phone': user.phone,
-        'email': user.email,
-        'address': user.address,
-        'profile_pic': user.profile_pic,
-        'message': 'User updated successfully!'
-    }), 200
-
+    return jsonify(dict(updated_user._mapping)), 200
 
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({'error': 'User not found.'}), 404
+    query = text("DELETE FROM `users` WHERE `id` = :user_id")
 
-    try:
-        # Delete main_img picture if it's not the default
-        if user.profile_pic and user.profile_pic != 'default.png':
-            delete_profile_pic(user.profile_pic)
+    with engine.connect() as connection:
+        connection.execute(query, {"user_id": user_id})
+        connection.commit()
 
-        db.session.delete(user)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': 'Failed to delete user.', 'details': str(e)}), 500
-
-    return jsonify({'message': 'User deleted successfully!'}), 200
-
+    return jsonify({"message": "User deleted successfully!"}), 200
 
 def allowed_file(filename):
     """Check if the file has an allowed extension."""
-    return '.' in filename and \
-        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_profile_pic(file):
-    """Save the uploaded main_img picture and return the filename."""
+    """Save the uploaded image and return the filename."""
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
 
-    # Get the current date and time formatted as YYYYMMDD_HHMMSS
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    # Get the file extension
     ext = file.filename.rsplit('.', 1)[1].lower()
-
-    # Generate a unique filename using the timestamp and original filename
     unique_filename = f"{timestamp}_{uuid.uuid4().hex}.{ext}"
     filename = secure_filename(unique_filename)
 
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(file_path)
-    return filename  # Return only the filename
 
-
-def delete_profile_pic(filename):
-    """Delete a main_img picture file from the upload folder."""
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    return filename

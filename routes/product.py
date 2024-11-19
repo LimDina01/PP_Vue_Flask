@@ -1,197 +1,168 @@
-from flask import Flask, render_template, request, jsonify
-from app import app, db  # Import db from app
+from flask import request, jsonify
+from app import app
+from sqlalchemy import create_engine, text
 import os
 from werkzeug.utils import secure_filename
 import uuid
 import datetime
 
-# Configuration
+# Configuration for file uploads
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'static', 'admin', 'assets', 'images', 'main_img')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limit file size to 16 MB
-
-# Allowed extensions for product images
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-class Product(db.Model):
-    __tablename__ = 'products'
-    id = db.Column(db.Integer, primary_key=True)
-    product_code = db.Column(db.String(50), nullable=False, unique=True)
-    product_name = db.Column(db.String(80), nullable=False)
-    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
-    cost = db.Column(db.Float, nullable=False)
-    price = db.Column(db.Float, nullable=False)
-    current_stock = db.Column(db.Integer, nullable=False)
-    image = db.Column(db.String(255), default='default.png')  # Store only the filename
+# Create a database engine
+engine = create_engine("mysql+mysqlconnector://root:@127.0.0.1/ppflask")
 
-@app.route('/api/products', methods=['GET'])
-def get_products():
-    products = Product.query.all()
-    return jsonify([{
-        'id': product.id,
-        'product_code': product.product_code,
-        'product_name': product.product_name,
-        'category_id': product.category_id,
-        'cost': product.cost,
-        'price': product.price,
-        'current_stock': product.current_stock,
-        'image': product.image
-    } for product in products])
-
-@app.route('/api/products', methods=['POST'])
-def add_product():
-    data = request.form
-    product_code = data.get('product_code')
-    product_name = data.get('product_name')
-    category_id = data.get('category_id')
-    cost = data.get('cost')
-    price = data.get('price')
-    current_stock = data.get('current_stock')
-
-    # Validate required fields
-    if not product_code or not product_name or not category_id or not cost or not price or not current_stock:
-        return jsonify({'error': 'All fields are required.'}), 400
-
-    # Handle product image
-    image_file = request.files.get('image')
-    image_filename = 'default.png'  # Default product image
-
-    if image_file and allowed_file(image_file.filename):
-        image_filename = save_image(image_file)
-    elif image_file:
-        return jsonify({'error': 'Invalid file type for product image.'}), 400
-
-    # Create the new product instance
-    new_product = Product(
-        product_code=product_code,
-        product_name=product_name,
-        category_id=category_id,
-        cost=float(cost),
-        price=float(price),
-        current_stock=int(current_stock),
-        image=image_filename  # Store only the filename
-    )
-
-    try:
-        db.session.add(new_product)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': 'Failed to add product.', 'details': str(e)}), 500
-
-    return jsonify({
-        'id': new_product.id,
-        'product_code': new_product.product_code,
-        'product_name': new_product.product_name,
-        'category_id': new_product.category_id,
-        'cost': new_product.cost,
-        'price': new_product.price,
-        'current_stock': new_product.current_stock,
-        'image': new_product.image,
-        'message': 'Product added successfully!'
-    }), 201
-
-@app.route('/api/products/<int:product_id>', methods=['PUT'])
-def update_product(product_id):
-    product = Product.query.get(product_id)
-    if not product:
-        return jsonify({'error': 'Product not found.'}), 404
-
-    data = request.form
-    product_code = data.get('product_code')
-    product_name = data.get('product_name')
-    category_id = data.get('category_id')
-    cost = data.get('cost')
-    price = data.get('price')
-    current_stock = data.get('current_stock')
-
-    # Validate required fields
-    if not product_code or not product_name or not category_id or not cost or not price or not current_stock:
-        return jsonify({'error': 'All fields are required.'}), 400
-
-    # Update fields
-    product.product_code = product_code
-    product.product_name = product_name
-    product.category_id = category_id
-    product.cost = float(cost)
-    product.price = float(price)
-    product.current_stock = int(current_stock)
-
-    # Handle product image
-    image_file = request.files.get('image')
-    if image_file:
-        if allowed_file(image_file.filename):
-            # Delete old product image if it's not the default
-            if product.image and product.image != 'default.png':
-                delete_image(product.image)
-            # Save new product image
-            product.image = save_image(image_file)
-        else:
-            return jsonify({'error': 'Invalid file type for product image.'}), 400
-
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': 'Failed to update product.', 'details': str(e)}), 500
-
-    return jsonify({
-        'id': product.id,
-        'product_code': product.product_code,
-        'product_name': product.product_name,
-        'category_id': product.category_id,
-        'cost': product.cost,
-        'price': product.price,
-        'current_stock': product.current_stock,
-        'image': product.image,
-        'message': 'Product updated successfully!'
-    }), 200
-
-@app.route('/api/products/<int:product_id>', methods=['DELETE'])
-def delete_product(product_id):
-    product = Product.query.get(product_id)
-    if not product:
-        return jsonify({'error': 'Product not found.'}), 404
-
-    try:
-        # Delete product image if it's not the default
-        if product.image and product.image != 'default.png':
-            delete_image(product.image)
-
-        db.session.delete(product)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': 'Failed to delete product.', 'details': str(e)}), 500
-
-    return jsonify({'message': 'Product deleted successfully!'}), 200
 
 def allowed_file(filename):
     """Check if the file has an allowed extension."""
-    return '.' in filename and \
-        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def save_image(file):
+
+def save_product_image(file):
     """Save the uploaded product image and return the filename."""
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
 
-    # Get the current date and time formatted as YYYYMMDD_HHMMSS
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    # Get the file extension
     ext = file.filename.rsplit('.', 1)[1].lower()
-
-    # Generate a unique filename using the timestamp and a UUID
     unique_filename = f"{timestamp}_{uuid.uuid4().hex}.{ext}"
     filename = secure_filename(unique_filename)
 
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(file_path)
-    return filename  # Return only the filename
+    return filename
 
 
-def delete_image(filename):
-    """Delete an image file from the upload folder."""
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
+@app.route('/api/products', methods=['POST'])
+def add_product():
+    # Check if the request contains the file part
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file part'}), 400
+
+    file = request.files['image']
+    if file and allowed_file(file.filename):
+        image_filename = save_product_image(file)
+    else:
+        image_filename = 'default.png'
+
+    # Extract other form data
+    product_code = request.form.get('product_code')
+    product_name = request.form.get('product_name')
+    category_id = request.form.get('category_id')
+    cost = request.form.get('cost')
+    price = request.form.get('price')
+    current_stock = request.form.get('current_stock')
+
+    # Validate required fields
+    if not product_code or not product_name or not category_id:
+        return jsonify({'error': 'Product code, name, and category are required fields.'}), 400
+
+    query = text("""
+        INSERT INTO `products` (product_code, product_name, category_id, cost, price, current_stock, image)
+        VALUES (:product_code, :product_name, :category_id, :cost, :price, :current_stock, :image)
+    """)
+
+    with engine.connect() as connection:
+        result = connection.execute(query, {
+            'product_code': product_code,
+            'product_name': product_name,
+            'category_id': category_id,
+            'cost': cost,
+            'price': price,
+            'current_stock': current_stock,
+            'image': image_filename
+        })
+        connection.commit()
+
+        # Fetch the newly created product
+        new_product_id = result.lastrowid
+        new_product = connection.execute(
+            text("SELECT * FROM products WHERE id = :id"),
+            {'id': new_product_id}
+        ).fetchone()
+
+    return jsonify(dict(new_product._mapping)), 201
+
+
+@app.route('/api/products', methods=['GET'])
+def get_products():
+    with engine.connect() as connection:
+        result = connection.execute(text("SELECT * FROM products"))
+        products = result.fetchall()
+        product_list = [
+            {
+                'id': product[0],
+                'product_code': product[1],
+                'product_name': product[2],
+                'category_id': product[3],
+                'cost': product[4],
+                'price': product[5],
+                'current_stock': product[6],
+                'image': product[7]
+            }
+            for product in products
+        ]
+    return jsonify(product_list)
+
+
+@app.route('/api/products/<int:product_id>', methods=['PUT'])
+def update_product(product_id):
+    file = request.files.get('image')
+    if file and allowed_file(file.filename):
+        image_filename = save_product_image(file)
+    else:
+        with engine.connect() as connection:
+            current_product = connection.execute(
+                text("SELECT image FROM products WHERE id = :id"),
+                {'id': product_id}
+            ).fetchone()
+            image_filename = current_product._mapping['image'] if current_product else 'default.png'
+
+    product_code = request.form.get('product_code')
+    product_name = request.form.get('product_name')
+    category_id = request.form.get('category_id')
+    cost = request.form.get('cost')
+    price = request.form.get('price')
+    current_stock = request.form.get('current_stock')
+
+    if not product_code or not product_name or not category_id:
+        return jsonify({'error': 'Product code, name, and category are required fields.'}), 400
+
+    query = text("""
+        UPDATE `products`
+        SET product_code = :product_code, product_name = :product_name, category_id = :category_id,
+            cost = :cost, price = :price, current_stock = :current_stock, image = :image
+        WHERE id = :product_id
+    """)
+
+    with engine.connect() as connection:
+        connection.execute(query, {
+            'product_code': product_code,
+            'product_name': product_name,
+            'category_id': category_id,
+            'cost': cost,
+            'price': price,
+            'current_stock': current_stock,
+            'image': image_filename,
+            'product_id': product_id
+        })
+        connection.commit()
+
+        updated_product = connection.execute(
+            text("SELECT * FROM products WHERE id = :id"),
+            {'id': product_id}
+        ).fetchone()
+
+    return jsonify(dict(updated_product._mapping))
+
+
+@app.route('/api/products/<int:product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    query = text("DELETE FROM `products` WHERE `id` = :product_id")
+
+    with engine.connect() as connection:
+        connection.execute(query, {"product_id": product_id})
+        connection.commit()
+
+    return jsonify({'message': 'Product deleted successfully!'}), 200

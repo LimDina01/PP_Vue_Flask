@@ -186,28 +186,27 @@
     <script>
         new Vue({
             el: '#app',
-            delimiters: ['[[', ']]'],  // Change delimiters to avoid conflict
+            delimiters: ['[[', ']]'],
             data() {
                 return {
-                    products: [],  // Array to hold products fetched from API
-                    categories: [],  // Array to hold categories fetched from API
-                    showProductModal: false,  // Modal toggle
-                    isEditMode: false,  // Flag to determine if modal is in edit mode
-                    productForm: {  // Form data for add/edit
-                        id: null,  // Only used in edit mode
+                    products: [],
+                    categories: [],
+                    showProductModal: false,
+                    isEditMode: false,
+                    productForm: {
+                        id: null,
                         product_code: '',
                         product_name: '',
-                        category_id: '',
+                        category_id: null,
                         cost: null,
                         price: null,
                         current_stock: null,
-                        image: null,  // For storing image file
-                        imagePreview: null // For storing image preview URL
+                        image: null,
+                        imagePreview: null
                     }
                 }
             },
             created() {
-                // Fetch products and categories when the component is created
                 this.fetchProducts();
                 this.fetchCategories();
             },
@@ -217,7 +216,6 @@
                         .then(response => response.json())
                         .then(data => {
                             this.products = data;
-                            console.log(this.products); // Populate products from API
                         })
                         .catch(error => {
                             console.error('Error fetching products:', error);
@@ -236,7 +234,6 @@
                         .then(response => response.json())
                         .then(data => {
                             this.categories = data;
-                            console.log(this.categories); // Populate categories from API
                         })
                         .catch(error => {
                             console.error('Error fetching categories:', error);
@@ -252,71 +249,47 @@
                 },
                 getCategoryName(categoryId) {
                     const category = this.categories.find(c => c.id === categoryId);
-                    return category ? category.name : 'Unknown'; // Return category name based on ID
+                    return category ? category.name : 'Unknown';
                 },
                 openAddProductModal() {
-                    this.productForm = {  // Reset form for adding a product
-                        id: null,
-                        product_code: '',
-                        product_name: '',
-                        category_id: '',
-                        cost: null,
-                        price: null,
-                        current_stock: null,
-                        image: null,
-                        imagePreview: null
-                    };
-                    this.showProductModal = true; // Show modal
-                    this.isEditMode = false; // Set to add mode
+                    this.resetProductForm();
+                    this.showProductModal = true;
+                    this.isEditMode = false;
                 },
                 openEditProductModal(product) {
-                    this.productForm = {  // Fill form for editing
-                        id: product.id,
-                        product_code: product.product_code,
-                        product_name: product.product_name,
-                        category_id: product.category_id,
-                        cost: product.cost,
-                        price: product.price,
-                        current_stock: product.current_stock,
-                        image: null,
-                        imagePreview: null
-                    };
-                    this.showProductModal = true; // Show modal
-                    this.isEditMode = true; // Set to edit mode
+                    this.productForm = { ...product, image: null, imagePreview: null };
+                    this.showProductModal = true;
+                    this.isEditMode = true;
                 },
                 closeProductModal() {
-                    this.showProductModal = false; // Hide modal
+                    this.showProductModal = false;
                 },
                 handleFileUpload(event) {
-                    const file = event.target.files[0]; // Get the uploaded file
-                    this.productForm.image = file; // Store file in the form data
-                    this.productForm.imagePreview = URL.createObjectURL(file); // Create a preview URL
+                    const file = event.target.files[0];
+                    this.productForm.image = file;
+                    this.productForm.imagePreview = URL.createObjectURL(file);
                 },
                 addProduct() {
-                    const formData = new FormData(); // Create a new FormData object
-                    Object.entries(this.productForm).forEach(([key, value]) => {
-                        formData.append(key, value); // Append form data
-                    });
-
+                    const formData = this.createFormData();
                     fetch('/api/products', {
                         method: 'POST',
-                        body: formData // Send form data
+                        body: formData
                     })
-                    .then(response => {
-                        if (response.ok) {
-                            this.closeProductModal(); // Close modal on success
-                            this.fetchProducts(); // Refresh products
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Success',
-                                text: 'Product added successfully!',
-                                customClass: {
-                                    container: 'my-swal'
-                                }
-                            });
-                        } else {
-                            throw new Error('Failed to add product.'); // Handle error
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
                         }
+                        this.closeProductModal();
+                        this.fetchProducts();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: 'Product added successfully!',
+                            customClass: {
+                                container: 'my-swal'
+                            }
+                        });
                     })
                     .catch(error => {
                         console.error('Error adding product:', error);
@@ -331,30 +304,26 @@
                     });
                 },
                 updateProduct() {
-                    const formData = new FormData(); // Create a new FormData object
-                    Object.entries(this.productForm).forEach(([key, value]) => {
-                        formData.append(key, value); // Append form data
-                    });
-
+                    const formData = this.createFormData();
                     fetch(`/api/products/${this.productForm.id}`, {
                         method: 'PUT',
-                        body: formData // Send form data
+                        body: formData
                     })
-                    .then(response => {
-                        if (response.ok) {
-                            this.closeProductModal(); // Close modal on success
-                            this.fetchProducts(); // Refresh products
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Success',
-                                text: 'Product updated successfully!',
-                                customClass: {
-                                    container: 'my-swal'
-                                }
-                            });
-                        } else {
-                            throw new Error('Failed to update product.'); // Handle error
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
                         }
+                        this.closeProductModal();
+                        this.fetchProducts();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: 'Product updated successfully!',
+                            customClass: {
+                                container: 'my-swal'
+                            }
+                        });
                     })
                     .catch(error => {
                         console.error('Error updating product:', error);
@@ -385,20 +354,20 @@
                             fetch(`/api/products/${product.id}`, {
                                 method: 'DELETE'
                             })
-                            .then(response => {
-                                if (response.ok) {
-                                    this.fetchProducts(); // Refresh products
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Deleted!',
-                                        text: 'Product has been deleted.',
-                                        customClass: {
-                                            container: 'my-swal'
-                                        }
-                                    });
-                                } else {
-                                    throw new Error('Failed to delete product.'); // Handle error
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.error) {
+                                    throw new Error(data.error);
                                 }
+                                this.fetchProducts();
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Deleted!',
+                                    text: 'Product has been deleted.',
+                                    customClass: {
+                                        container: 'my-swal'
+                                    }
+                                });
                             })
                             .catch(error => {
                                 console.error('Error deleting product:', error);
@@ -413,6 +382,28 @@
                             });
                         }
                     });
+                },
+                createFormData() {
+                    const formData = new FormData();
+                    Object.entries(this.productForm).forEach(([key, value]) => {
+                        if (value !== null) {
+                            formData.append(key, value);
+                        }
+                    });
+                    return formData;
+                },
+                resetProductForm() {
+                    this.productForm = {
+                        id: null,
+                        product_code: '',
+                        product_name: '',
+                        category_id: '',
+                        cost: null,
+                        price: null,
+                        current_stock: null,
+                        image: null,
+                        imagePreview: null
+                    };
                 }
             }
         });

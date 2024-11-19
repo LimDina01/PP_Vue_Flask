@@ -6,10 +6,8 @@
         <button type="button" class="btn btn-primary mb-3" @click="openAddUserModal">
             Add User
         </button>
-        <div class="card original-card-color"> <!-- Added 'original-card-color' class -->
+        <div class="card original-card-color">
             <div class="card-body">
-
-
                 <div class="table-responsive mt-3">
                     <table class="table table-hover">
                         <thead>
@@ -22,7 +20,7 @@
                             <th>Email</th>
                             <th>Address</th>
                             <th>Profile</th>
-                            <th>Actions</th> <!-- Actions column -->
+                            <th>Actions</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -62,7 +60,7 @@
         <!-- Modal for adding/updating user -->
         {% raw %}
         <div v-if="showUserModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-            <div class="modal-dialog ">
+            <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title font-weight-bold w-100 text-center py-2" style="font-size: 1.5rem;">{{
@@ -148,28 +146,25 @@
     <!-- Include Vue.js -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
     <!-- Include SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>    <!-- Include SweetAlert2 Dark Theme -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Include SweetAlert2 Dark Theme -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.css">
     <!-- Include Font Awesome for Icons -->
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <style>
-        /* Updated CSS for normal main_img images */
         .profile-image {
-            max-width: 100px; /* Adjust as needed */
-            max-height: 100px; /* Limit the height */
+            max-width: 100px;
+            max-height: 100px;
             object-fit: cover;
-            /* Removed border-radius to display as normal images */
         }
 
         .profile-image-preview {
-            max-width: 200px; /* Increased size for better visibility */
+            max-width: 200px;
             max-height: 200px;
             object-fit: cover;
-            /* Removed border-radius to display as normal images */
         }
 
-
-        .form-select {
+        .form-select, .form-control {
             background-color: #343a40;
             color: #ffffff !important;
             border: 1px solid #495057;
@@ -178,27 +173,15 @@
             transition: background-color 0.3s ease;
         }
 
-
-        .form-control {
-            background-color: #343a40; /* Dark background */
-            color: #ffffff; /* Black text */
-            border: 1px solid #495057; /* Darker border */
-            padding: 10px;
-            border-radius: 4px;
-            transition: background-color 0.3s ease;
-        }
-
         .form-control:focus {
-            background-color: #23272b; /* Slightly darker background on focus */
-            border-color: #6c757d; /* Lighter border when focused */
-            outline: none; /* Remove default outline */
+            background-color: #23272b;
+            border-color: #6c757d;
+            outline: none;
         }
 
         .modal-content {
             background-color: #1a1c24;
-
         }
-
 
         .modal-title {
             font-weight: bold;
@@ -210,21 +193,19 @@
             font-size: 1.5rem;
             line-height: 1;
         }
-
-
     </style>
     <script>
         new Vue({
             el: '#app',
             data() {
                 return {
-                    users: [],  // Array to hold users fetched from API
-                    showUserModal: false,  // Modal toggle
-                    isEditMode: false,  // Flag to determine if modal is in edit mode
-                    userForm: {  // Form data for add/edit
-                        id: null,  // Only used in edit mode
+                    users: [],
+                    showUserModal: false,
+                    isEditMode: false,
+                    userForm: {
+                        id: null,
                         profilePic: '',
-                        profilePicPreview: '',  // For image preview
+                        profilePicPreview: '',
                         username: '',
                         gender: '',
                         role: '',
@@ -232,11 +213,10 @@
                         email: '',
                         address: ''
                     },
-                    userToEdit: null  // Holds the user being edited
+                    userToEdit: null
                 }
             },
             created() {
-                // Fetch users when the component is created
                 this.fetchUsers();
             },
             methods: {
@@ -245,7 +225,6 @@
                         .then(response => response.json())
                         .then(data => {
                             this.users = data;
-                            console.log(this.users); // Populate users from API
                         })
                         .catch(error => {
                             console.error('Error fetching users:', error);
@@ -265,9 +244,9 @@
                     this.isEditMode = true;
                     this.userToEdit = user;
                     this.userForm = {
-                        id: user.id,  // Assuming each user has a unique 'id'
-                        profilePic: '',  // Reset profilePic; handle separately
-                        profilePicPreview: '',  // Reset preview
+                        id: user.id,
+                        profilePic: '',
+                        profilePicPreview: '',
                         username: user.username,
                         gender: user.gender,
                         role: user.role,
@@ -294,11 +273,10 @@
                     fetch('/api/users', {
                         method: 'POST',
                         body: formData
-                        // Send form data with file
                     })
                         .then(response => {
                             if (response.ok) {
-                                return response.json(); // Return the response data
+                                return response.json();
                             } else {
                                 return response.json().then(err => {
                                     throw err;
@@ -306,10 +284,9 @@
                             }
                         })
                         .then(newUser => {
-                            // If the new user is returned from the server, add it to the users array
-                            this.users.push(newUser); // Update the local users array
-                            this.showUserModal = false;  // Close modal
-                            this.resetUserForm();  // Reset the form
+                            this.users.push(newUser);
+                            this.showUserModal = false;
+                            this.resetUserForm();
                             Swal.fire({
                                 icon: 'success',
                                 title: 'User added successfully!',
@@ -359,11 +336,10 @@
                     fetch(`/api/users/${this.userForm.id}`, {
                         method: 'PUT',
                         body: formData
-                        // Send form data with file if updated
                     })
                         .then(response => {
                             if (response.ok) {
-                                return response.json(); // Return the updated user data
+                                return response.json();
                             } else {
                                 return response.json().then(err => {
                                     throw err;
@@ -371,14 +347,12 @@
                             }
                         })
                         .then(updatedUser => {
-                            // Find the index of the updated user in the users array
                             const index = this.users.findIndex(user => user.id === updatedUser.id);
                             if (index !== -1) {
-                                // Replace the old user data with the updated data
                                 this.$set(this.users, index, updatedUser);
                             }
-                            this.showUserModal = false;  // Close modal
-                            this.resetUserForm();  // Reset the form
+                            this.showUserModal = false;
+                            this.resetUserForm();
                             Swal.fire({
                                 icon: 'success',
                                 title: 'User updated successfully!',
@@ -420,7 +394,6 @@
                             })
                                 .then(response => {
                                     if (response.ok) {
-                                        // Remove the user from the users array
                                         this.users = this.users.filter(u => u.id !== user.id);
                                         Swal.fire({
                                             icon: 'success',
@@ -452,10 +425,9 @@
                     });
                 },
                 handleFileUpload(event) {
-                    const file = event.target.files[0]; // Get the selected file
+                    const file = event.target.files[0];
                     if (file) {
-                        // Limit file size to 2MB (adjust as needed)
-                        const maxSize = 2 * 1024 * 1024; // 2MB
+                        const maxSize = 2 * 1024 * 1024;
                         if (file.size > maxSize) {
                             Swal.fire({
                                 icon: 'error',
@@ -465,13 +437,12 @@
                                     popup: 'swal2-dark'
                                 }
                             });
-                            event.target.value = ''; // Reset the file input
+                            event.target.value = '';
                             this.userForm.profilePic = '';
                             this.userForm.profilePicPreview = '';
                             return;
                         }
 
-                        // Validate file type
                         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
                         if (!allowedTypes.includes(file.type)) {
                             Swal.fire({
@@ -482,28 +453,25 @@
                                     popup: 'swal2-dark'
                                 }
                             });
-                            event.target.value = ''; // Reset the file input
+                            event.target.value = '';
                             this.userForm.profilePic = '';
                             this.userForm.profilePicPreview = '';
                             return;
                         }
 
-                        this.userForm.profilePic = file; // Store the new image
+                        this.userForm.profilePic = file;
 
-                        // Generate a new preview and reset the old preview
                         const reader = new FileReader();
                         reader.onload = e => {
-                            this.userForm.profilePicPreview = e.target.result; // Show new preview
+                            this.userForm.profilePicPreview = e.target.result;
                         };
                         reader.readAsDataURL(file);
                     } else {
-                        // Reset if no file selected
                         this.userForm.profilePic = '';
                         this.userForm.profilePicPreview = '';
                     }
                 },
                 resetUserForm() {
-                    // Reset user form fields
                     this.userForm = {
                         id: null,
                         profilePic: '',
@@ -518,7 +486,6 @@
                     this.userToEdit = null;
                 }
             }
-
         });
     </script>
 {% endblock %}
