@@ -5,9 +5,10 @@ import os
 from werkzeug.utils import secure_filename
 import uuid
 import datetime
+from PIL import Image
 
 # Configuration for file uploads
-app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'static', 'admin', 'assets', 'images', 'main_img')
+# app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'static', 'admin', 'assets', 'images')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 # Create a database engine
@@ -21,16 +22,30 @@ def allowed_file(filename):
 
 def save_product_image(file):
     """Save the uploaded product image and return the filename."""
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
+    main_img_folder = os.path.join(os.getcwd(), 'static', 'admin', 'assets', 'images', 'main_img')
+    sub_img_folder = os.path.join(os.getcwd(), 'static', 'admin', 'assets', 'images', 'sub_img')
+
+    # Ensure directories exist
+    if not os.path.exists(main_img_folder):
+        os.makedirs(main_img_folder)
+    if not os.path.exists(sub_img_folder):
+        os.makedirs(sub_img_folder)
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     ext = file.filename.rsplit('.', 1)[1].lower()
     unique_filename = f"{timestamp}_{uuid.uuid4().hex}.{ext}"
     filename = secure_filename(unique_filename)
 
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(file_path)
+    # Save the original image to main_img
+    main_img_path = os.path.join(main_img_folder, filename)
+    file.save(main_img_path)
+
+    # Create a compressed version for sub_img
+    with Image.open(main_img_path) as img:
+        img.thumbnail((300, 300))  # Resize to a smaller size
+        sub_img_path = os.path.join(sub_img_folder, filename)
+        img.save(sub_img_path, quality=60, optimize=True)  # Save with compression
+
     return filename
 
 

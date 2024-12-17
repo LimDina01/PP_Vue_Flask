@@ -1,238 +1,274 @@
 {% extends "admin/layout.html" %}
 
 {% block main_content %}
-    <div id="app" class="col-12 grid-margin">
-        <h1 class="text-center my-4">User Management</h1>
-        <button type="button" class="btn btn-primary mb-3" @click="openAddUserModal">
-            Add User
-        </button>
-        <div class="card original-card-color">
-            <div class="card-body">
-                <div class="table-responsive mt-3">
-                    <table class="table table-hover">
-                        <thead>
-                        <tr>
-                            <th>No.</th>
-                            <th>Username</th>
-                            <th>Gender</th>
-                            <th>Role</th>
-                            <th>Phone</th>
-                            <th>Email</th>
-                            <th>Address</th>
-                            <th>Profile</th>
-                            <th>Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% raw %}
-                        <tr v-for="(user, index) in users" :key="user.id">
-                            <td>{{ index + 1 }}</td>
-                            <td>{{ user.username }}</td>
-                            <td>{{ user.gender }}</td>
-                            <td>{{ user.role }}</td>
-                            <td>{{ user.phone }}</td>
-                            <td>{{ user.email }}</td>
-                            <td>{{ user.address }}</td>
-                            <td>
-                                <img :src="'/static/admin/assets/images/sub_img/' + user.profile_pic"
-                                     class="profile-image" alt="Profile image" @click="showFullImage(user.profile_pic)">
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-warning me-2" @click="openEditUserModal(user)">
-                                    <i class="fas fa-edit"></i>Edit
-                                </button>
-                                <button class="btn btn-sm btn-danger" @click="deleteUser(user)">
-                                    <i class="fas fa-trash-alt"></i>Delete
-                                </button>
-                            </td>
-                        </tr>
+    <div id="app">
+        <div class="container">
+            <h1 class="text-center my-4">User Management</h1>
 
-                        <tr v-if="users.length === 0">
-                            <td colspan="9" class="text-center">No users found.</td>
-                        </tr>
-                        {% endraw %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+            <!-- Add User Button -->
+            <button @click="openAddUserModal" class="btn btn-primary mb-3">Add User</button>
 
-        <!-- Modal for adding/updating user -->
-        {% raw %}
-        <div v-if="showUserModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-            <div class="modal-dialog">
+            <!-- User Table -->
+            <table class="table table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        <th scope="col">No.</th>
+                        <th scope="col">Profile</th>
+                        <th scope="col">Username</th>
+                        <th scope="col">Gender</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Phone</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Address</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(user, index) in users" :key="user.id">
+                        <td>[[ index + 1 ]]</td>
+                        <td>
+                            <img :src="'/static/admin/assets/images/sub_img/' + user.profile_pic"
+                                 class="profile-image" alt="Profile Image" 
+                                 @click="showFullImage(user.profile_pic)"
+                                 style="max-height: 100px; max-width: 100px; cursor: pointer;">
+                        </td>
+                        <td>[[ user.username ]]</td>
+                        <td>[[ user.gender ]]</td>
+                        <td>[[ user.role ]]</td>
+                        <td>[[ user.phone ]]</td>
+                        <td>[[ user.email ]]</td>
+                        <td>[[ user.address ]]</td>
+                        <td>
+                            <button @click="openEditUserModal(user)" class="btn btn-sm btn-warning">Edit</button>
+                            <button @click="deleteUser(user)" class="btn btn-sm btn-danger">Delete</button>
+                        </td>
+                    </tr>
+                    <tr v-if="users.length === 0">
+                        <td colspan="9" class="text-center">No users found.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Add/Edit User Modal -->
+            <div v-if="showUserModal" class="modal-backdrop">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title font-weight-bold w-100 text-center py-2" style="font-size: 1.5rem;">{{
-                            isEditMode ? 'Update User' : 'Add New User' }}</h5>
+                        <h5 class="modal-title font-weight-bold w-100 text-center py-2" style="font-size: 1.5rem;">[[
+                            isEditMode ? 'Update User' : 'Add New User' ]]</h5>
                     </div>
                     <div class="modal-body">
                         <form @submit.prevent="isEditMode ? updateUser() : addUser()" enctype="multipart/form-data">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="profilePic" class="form-label">Profile Picture</label>
-                                        <input type="file" @change="handleFileUpload" class="form-control"
-                                               accept="image/*">
+                            <div class="form-group text-center">
+                                <label for="profilePic">Profile Picture</label>
+                                <input type="file" class="form-control" @change="handleFileUpload" accept="image/*">
 
-                                        <!-- Image Preview for Add/Edit -->
-                                        <div v-if="userForm.profilePicPreview" class="mt-2">
-                                            <img :src="userForm.profilePicPreview" class="profile-image-preview"
-                                                 alt="Profile Image Preview">
-                                        </div>
-
-                                        <!-- Existing Profile Picture in Edit Mode -->
-                                        <div v-if="isEditMode && userToEdit.profile_pic && !userForm.profilePicPreview"
-                                             class="mt-2">
-                                            <img :src="'/static/admin/assets/images/main_img/' + userToEdit.profile_pic"
-                                                 class="profile-image-preview" alt="Current Profile Image">
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="username" class="form-label">Username</label>
-                                        <input type="text" v-model="userForm.username" class="form-control" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="gender" class="form-label">Gender</label>
-                                        <select v-model="userForm.gender" class="form-select" required>
-                                            <option value="">Select Gender</option>
-                                            <option value="Male">Male</option>
-                                            <option value="Female">Female</option>
-                                            <option value="Other">Other</option>
-                                        </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="phone" class="form-label">Phone</label>
-                                        <input type="text" v-model="userForm.phone" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="role" class="form-label">Role</label>
-                                        <select v-model="userForm.role" class="form-select" required>
-                                            <option value="">Select Role</option>
-                                            <option value="Admin">Admin</option>
-                                            <option value="Customer">Customer</option>
-                                        </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="email" class="form-label">Email</label>
-                                        <input type="email" v-model="userForm.email" class="form-control" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="address" class="form-label">Address</label>
-                                        <textarea v-model="userForm.address" class="form-control"></textarea>
-                                    </div>
+                                <!-- Image Preview -->
+                                <div v-if="userForm.profilePicPreview" class="mt-3">
+                                    <img :src="userForm.profilePicPreview" alt="Image Preview"
+                                         style="max-height: 100px; max-width: 100px;">
                                 </div>
                             </div>
-
-                            <!-- Action Buttons -->
-                            <div class="d-flex justify-content-end justify-content-between">
-                                <button type="button" class="btn btn-secondary me-2" @click="closeUserModal">Cancel
-                                </button>
-                                <button type="submit" class="btn btn-primary">{{ isEditMode ? 'Update User' : 'Add User'
-                                    }}
-                                </button>
+                            <div class="form-group">
+                                <label for="username">Username</label>
+                                <input type="text" class="form-control" v-model="userForm.username" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="gender">Gender</label>
+                                <select v-model="userForm.gender" class="form-control" required>
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="role">Role</label>
+                                <select v-model="userForm.role" class="form-control" required>
+                                    <option value="">Select Role</option>
+                                    <option value="Admin">Admin</option>
+                                    <option value="Customer">Customer</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="phone">Phone</label>
+                                <input type="text" class="form-control" v-model="userForm.phone">
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Email</label>
+                                <input type="email" class="form-control" v-model="userForm.email" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="address">Address</label>
+                                <textarea class="form-control" v-model="userForm.address"></textarea>
                             </div>
                         </form>
                     </div>
-                </div>
-            </div>
-        </div>
-        {% endraw %}
-
-        <div v-if="showCropperModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Crop Image</h5>
-                    </div>
-                    <div class="modal-body">
-                        <img id="image-to-crop" :src="userForm.profilePicPreview" alt="Image to crop">
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @click="closeCropperModal">Cancel</button>
-                        <button type="button" class="btn btn-primary" @click="cropImage">Crop</button>
+                    <div class="modal-footer d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" @click="closeUserModal">Close</button>
+                        <button type="submit" class="btn btn-primary"
+                                @click="isEditMode ? updateUser() : addUser()">[[ isEditMode ? 'Update User' : 'Add User' ]]
+                        </button>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Modal for displaying full-size image -->
-        <div v-if="showImageModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Full Image</h5>
-                        <button type="button" class="btn-close" @click="closeImageModal"></button>
+            <!-- Cropper Modal -->
+            <div v-if="showCropperModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Crop Image</h5>
+                            <button type="button" class="btn btn-secondary" @click="closeCropperModal">Close</button>
+                        </div>
+                        <div class="modal-body p-0">
+                            <img id="image-to-crop" :src="userForm.profilePicPreview" alt="Image to crop">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" @click="cropImage">Crop</button>
+                        </div>
                     </div>
-                    <div class="modal-body">
-                        <img :src="'/static/admin/assets/images/main_img/' + currentImage" class="img-fluid" alt="Full Image">
+                </div>
+            </div>
+
+            <!-- Image Full View Modal -->
+            <div v-if="showImageModal" class="modal fade show d-block" tabindex="-1"
+                 style="background: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Full Image</h5>
+                            <button type="button" class="btn btn-secondary" @click="closeImageModal">Close</button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img :src="'/static/admin/assets/images/main_img/' + currentImage" class="img-fluid"
+                                 alt="Full Image">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Include Vue.js -->
-    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
-    <!-- Include SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Include SweetAlert2 Dark Theme -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.css">
-    <!-- Include Font Awesome for Icons -->
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+     <!-- Include Vue.js -->
+     <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+     <!-- Include SweetAlert2 -->
+     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+     <!-- Include SweetAlert2 Dark Theme -->
+     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.css">
+     <!-- Include Font Awesome for Icons -->
+     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+     <!-- Add Cropper.js CSS -->
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+     <!-- Add Cropper.js JS -->
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+     
     <style>
-        .profile-image {
-            max-width: 100px;
-            max-height: 100px;
-            object-fit: cover;
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1050;
         }
 
-        .profile-image-preview {
-            max-width: 200px;
-            max-height: 200px;
-            object-fit: cover;
+        .modal-content {
+            background-color: #1a1c24;
+            padding: 20px;
+            border-radius: 5px;
+            width: 500px;
+            max-width: 90%;
+            max-height: 80vh; /* Set a max height for the modal */
+            overflow-y: auto; /* Enable vertical scrolling */
+            
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
-        .form-select, .form-control {
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close {
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+        }
+
+        .thead-dark th {
             background-color: #343a40;
-            color: #ffffff !important;
-            border: 1px solid #495057;
+            color: white;
+        }
+
+        .form-control {
+            background-color: #343a40; /* Dark background */
+            color: #ffffff; /* Black text */
+            border: 1px solid #495057; /* Darker border */
             padding: 10px;
             border-radius: 4px;
             transition: background-color 0.3s ease;
         }
 
         .form-control:focus {
-            background-color: #23272b;
-            border-color: #6c757d;
-            outline: none;
+            background-color: #23272b; /* Slightly darker background on focus */
+            border-color: #6c757d; /* Lighter border when focused */
+            outline: none; /* Remove default outline */
         }
 
-        .modal-content {
-            background-color: #1a1c24;
+        .modal-content::-webkit-scrollbar {
+            display: none; /* Hide scrollbar for Webkit browsers */
         }
 
-        .modal-title {
-            font-weight: bold;
+        /* For the crop modal specifically */
+        .modal-body.p-0 {
+            overflow: hidden;
         }
 
-        .btn-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            line-height: 1;
+        #image-to-crop {
+            max-width: 100%;
+            max-height: 70vh;
+            display: block;
         }
 
-        /* .profile-image:hover {
-            content: url('/static/admin/assets/images/main_img/' + user.profile_pic);
-        } */
+        /* Update Cropper.js container styles */
+        .cropper-container {
+            max-height: 70vh !important;
+            z-index: 1070 !important;
+        }
+
+        /* Add new CSS for the cropper modal */
+        .modal.show {
+            z-index: 1060 !important;
+        }
+
+        /* Optional: Add this if the cropper view/controls are still having issues */
+        .cropper-view-box,
+        .cropper-face,
+        .cropper-line,
+        .cropper-point {
+            z-index: 1075 !important;
+        }
+
+        .profile-image {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .profile-image:hover {
+            transform: scale(1.1);
+        }
     </style>
+    
     <script>
         new Vue({
             el: '#app',
+            delimiters: ['[[', ']]'],
             data() {
                 return {
                     users: [],
@@ -252,7 +288,8 @@
                     userToEdit: null,
                     showCropperModal: false,
                     showImageModal: false,
-                    currentImage: ''
+                    currentImage: '',
+                    cropper: null
                 }
             },
             created() {
@@ -534,8 +571,6 @@
                                 aspectRatio: 1,
                                 viewMode: 1,
                             });
-                        } else {
-                            console.error('Image element not found for cropping.');
                         }
                     });
                 },
@@ -543,21 +578,17 @@
                     if (this.cropper) {
                         const canvas = this.cropper.getCroppedCanvas();
                         this.userForm.profilePicPreview = canvas.toDataURL();
-                        
                         canvas.toBlob((blob) => {
-                            // Create a new File object with a proper filename
                             const originalFileName = this.userForm.profilePic.name;
                             const fileExtension = originalFileName.split('.').pop();
                             const newFileName = `cropped_${originalFileName}`;
-                            
-                            const croppedFile = new File([blob], newFileName, { 
+                            const croppedFile = new File([blob], newFileName, {
                                 type: `image/${fileExtension}`,
                                 lastModified: new Date().getTime()
                             });
-                            
                             this.userForm.profilePic = croppedFile;
                             this.closeCropperModal();
-                        }, 'image/jpeg', 0.9); // Specify JPEG format with 90% quality
+                        }, 'image/jpeg', 0.9);
                     }
                 },
                 closeCropperModal() {

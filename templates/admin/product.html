@@ -31,8 +31,10 @@
                     <td>[[ product.price ]]</td>
                     <td>[[ product.current_stock ]]</td>
                     <td>
-                        <img :src="'/static/admin/assets/images/main_img/' + product.image"
-                             class="profile-image" alt="Product image" style="max-height: 100px; max-width: 100px;">
+                        <img :src="'/static/admin/assets/images/sub_img/' + product.image"
+                             class="profile-image" alt="Product image" 
+                             @click="showFullImage(product.image)"
+                             style="max-height: 100px; max-width: 100px; cursor: pointer;">
                     </td>
                     <td>
                         <button @click="openEditProductModal(product)" class="btn btn-sm btn-warning">Edit</button>
@@ -107,6 +109,38 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Cropper Modal -->
+            <div v-if="showCropperModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Crop Image</h5>
+                        </div>
+                        <div class="modal-body p-0">
+                            <img id="image-to-crop" :src="productForm.imagePreview" alt="Image to crop">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" @click="cropImage">Crop</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal for displaying full-size image -->
+            <div v-if="showImageModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Full Image</h5>
+                            <button type="button" class="btn btn-secondary" @click="closeImageModal">Close</button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img :src="'/static/admin/assets/images/main_img/' + currentImage" class="img-fluid" alt="Full Image">
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -118,6 +152,10 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.css">
     <!-- Include Font Awesome for Icons -->
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <!-- Add Cropper.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <!-- Add Cropper.js JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
 
     <!-- Custom CSS for modal and table -->
     <style>
@@ -131,7 +169,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 9999;
+            z-index: 1050;
         }
 
         .modal-content {
@@ -181,6 +219,45 @@
         .modal-content::-webkit-scrollbar {
             display: none; /* Hide scrollbar for Webkit browsers */
         }
+
+        /* For the crop modal specifically */
+        .modal-body.p-0 {
+            overflow: hidden;
+        }
+
+        #image-to-crop {
+            max-width: 100%;
+            max-height: 70vh;
+            display: block;
+        }
+
+        /* Update Cropper.js container styles */
+        .cropper-container {
+            max-height: 70vh !important;
+            z-index: 1070 !important;
+        }
+
+        /* Add new CSS for the cropper modal */
+        .modal.show {
+            z-index: 1060 !important;
+        }
+
+        /* Optional: Add this if the cropper view/controls are still having issues */
+        .cropper-view-box,
+        .cropper-face,
+        .cropper-line,
+        .cropper-point {
+            z-index: 1075 !important;
+        }
+
+        .profile-image {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .profile-image:hover {
+            transform: scale(1.1);
+        }
     </style>
 
     <script>
@@ -203,7 +280,11 @@
                         current_stock: null,
                         image: null,
                         imagePreview: null
-                    }
+                    },
+                    showCropperModal: false,
+                    cropper: null,
+                    showImageModal: false,
+                    currentImage: ''
                 }
             },
             created() {
@@ -266,8 +347,50 @@
                 },
                 handleFileUpload(event) {
                     const file = event.target.files[0];
-                    this.productForm.image = file;
-                    this.productForm.imagePreview = URL.createObjectURL(file);
+                    if (file) {
+                        const maxSize = 2 * 1024 * 1024; // 2MB
+                        if (file.size > maxSize) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'File Too Large',
+                                text: 'Image size should not exceed 2MB.',
+                                customClass: {
+                                    popup: 'swal2-dark'
+                                }
+                            });
+                            event.target.value = '';
+                            this.productForm.image = null;
+                            this.productForm.imagePreview = null;
+                            return;
+                        }
+
+                        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                        if (!allowedTypes.includes(file.type)) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Invalid File Type',
+                                text: 'Only JPG, PNG, and GIF files are allowed.',
+                                customClass: {
+                                    popup: 'swal2-dark'
+                                }
+                            });
+                            event.target.value = '';
+                            this.productForm.image = null;
+                            this.productForm.imagePreview = null;
+                            return;
+                        }
+
+                        this.productForm.image = file;
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            this.productForm.imagePreview = e.target.result;
+                            this.openCropperModal();
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        this.productForm.image = null;
+                        this.productForm.imagePreview = null;
+                    }
                 },
                 addProduct() {
                     const formData = this.createFormData();
@@ -404,6 +527,55 @@
                         image: null,
                         imagePreview: null
                     };
+                },
+                openCropperModal() {
+                    this.showCropperModal = true;
+                    this.$nextTick(() => {
+                        const image = document.getElementById('image-to-crop');
+                        if (image) {
+                            this.cropper = new Cropper(image, {
+                                aspectRatio: 1,
+                                viewMode: 1,
+                            });
+                        } else {
+                            console.error('Image element not found for cropping.');
+                        }
+                    });
+                },
+                cropImage() {
+                    if (this.cropper) {
+                        const canvas = this.cropper.getCroppedCanvas();
+                        this.productForm.imagePreview = canvas.toDataURL();
+                        
+                        canvas.toBlob((blob) => {
+                            const originalFileName = this.productForm.image.name;
+                            const fileExtension = originalFileName.split('.').pop();
+                            const newFileName = `cropped_${originalFileName}`;
+                            
+                            const croppedFile = new File([blob], newFileName, { 
+                                type: `image/${fileExtension}`,
+                                lastModified: new Date().getTime()
+                            });
+                            
+                            this.productForm.image = croppedFile;
+                            this.closeCropperModal();
+                        }, 'image/jpeg', 0.9);
+                    }
+                },
+                closeCropperModal() {
+                    if (this.cropper) {
+                        this.cropper.destroy();
+                        this.cropper = null;
+                    }
+                    this.showCropperModal = false;
+                },
+                showFullImage(image) {
+                    this.currentImage = image;
+                    this.showImageModal = true;
+                },
+                closeImageModal() {
+                    this.showImageModal = false;
+                    this.currentImage = '';
                 }
             }
         });
