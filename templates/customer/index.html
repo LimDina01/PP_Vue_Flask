@@ -16,11 +16,35 @@
     <style>
         #parent {
             overflow-y: auto; /* Enables vertical scrolling */
-            max-height: 500px; /* Sets a maximum height for the scrollable area */
+            max-height: 100%; /* Sets a maximum height for the scrollable area */
         }
         .card {
             margin-bottom: 20px; /* Adds spacing between cards */
         }
+        .scrollable-container {
+            max-height: 500px; /* Adjust as needed */
+            overflow-y: auto;
+        }
+
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-body {
+            padding: 15px;
+        }
+
+        .card-img-top {
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+
+        .mb-4 {
+            margin-bottom: 1.5rem;
+        }
+        
         </style>
     </head>
   <body>
@@ -246,16 +270,16 @@
   
                           <thead>
                           <tr>
-                              <th>#</th>
-                              <th width="150px">Item</th>
-                              <th width="170px">Qty</th>
-                              <th>Price</th>
-                              <th width="5px">
+                            <th style="width: 5%;">#</th>
+                            <th style="width: 45%;">Item</th>
+                            <th style="width: 15%;">Qty</th>
+                            <th style="width: 20%;">Price</th>
+                              <th style="width: 15%;">
                                   <button onclick="$(this).cancelOrder()" class="btn btn-danger btn-xs"><i class="fa fa-times"></i></button>
                               </th>
                           </tr>
                           </thead>
-                          <tbody>
+                          <tbody id="cart">
   
   
                           </tbody>
@@ -302,8 +326,8 @@
   
               </div>
           </div>
-          <div class="col-md-8">
-              <div class="card-box">
+          <div class="col-md-8 d-flex flex-column">
+              <div class="card-box flex-grow-1">
                   <div class="row">
                       <div class="col-md-4">
                           <input type="text" id="search" class="form-control" placeholder="Search product by name or sku">
@@ -315,136 +339,24 @@
                       </div>
                   </div>
                   <hr>
-                  <div class="row scrollable-container" id="parent"> 
-                    <div class="col-md-4">
-                        <div class="card">
-                            <img class="card-img-top" src="https://via.placeholder.com/150" alt="Demo Product 1">
-                            <div class="card-body">
-                                <h5 class="card-title">Demo Product 1</h5>
-                                <p class="card-text">Description for demo product 1.</p>
-                                <p class="card-text"><strong>Price: $19.99</strong></p>
-                                <button class="btn btn-primary">Add to Cart</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <img class="card-img-top" src="https://via.placeholder.com/150" alt="Demo Product 2">
-                            <div class="card-body">
-                                <h5 class="card-title">Demo Product 2</h5>
-                                <p class="card-text">Description for demo product 2.</p>
-                                <p class="card-text"><strong>Price: $29.99</strong></p>
-                                <button class="btn btn-primary">Add to Cart</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <img class="card-img-top" src="https://via.placeholder.com/150" alt="Demo Product 3">
-                            <div class="card-body">
-                                <h5 class="card-title">Demo Product 3</h5>
-                                <p class="card-text">Description for demo product 3.</p>
-                                <p class="card-text"><strong>Price: $39.99</strong></p>
-                                <button class="btn btn-primary">Add to Cart</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <img class="card-img-top" src="https://via.placeholder.com/150" alt="Demo Product 4">
-                            <div class="card-body">
-                                <h5 class="card-title">Demo Product 4</h5>
-                                <p class="card-text">Description for demo product 4.</p>
-                                <p class="card-text"><strong>Price: $49.99</strong></p>
-                                <button class="btn btn-primary">Add to Cart</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <img class="card-img-top" src="https://via.placeholder.com/150" alt="Demo Product 5">
-                            <div class="card-body">
-                                <h5 class="card-title">Demo Product 5</h5>
-                                <p class="card-text">Description for demo product 5.</p>
-                                <p class="card-text"><strong>Price: $59.99</strong></p>
-                                <button class="btn btn-primary">Add to Cart</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <img class="card-img-top" src="https://via.placeholder.com/150" alt="Demo Product 6">
-                            <div class="card-body">
-                                <h5 class="card-title">Demo Product 6</h5>
-                                <p class="card-text">Description for demo product 6.</p>
-                                <p class="card-text"><strong>Price: $69.99</strong></p>
-                                <button class="btn btn-primary">Add to Cart</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <img class="card-img-top" src="https://via.placeholder.com/150" alt="Demo Product 7">
-                            <div class="card-body">
-                                <h5 class="card-title">Demo Product 7</h5>
-                                <p class="card-text">Description for demo product 7.</p>
-                                <p class="card-text"><strong>Price: $79.99</strong></p>
-                                <button class="btn btn-primary">Add to Cart</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <img class="card-img-top" src="https://via.placeholder.com/150" alt="Demo Product 8">
-                            <div class="card-body">
-                                <h5 class="card-title">Demo Product 8</h5>
-                                <p class="card-text">Description for demo product 8.</p>
-                                <p class="card-text"><strong>Price: $89.99</strong></p>
-                                <button class="btn btn-primary">Add to Cart</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <img class="card-img-top" src="https://via.placeholder.com/150" alt="Demo Product 9">
-                            <div class="card-body">
-                                <h5 class="card-title">Demo Product 9</h5>
-                                <p class="card-text">Description for demo product 9.</p>
-                                <p class="card-text"><strong>Price: $99.99</strong></p>
-                                <button class="btn btn-primary">Add to Cart</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <img class="card-img-top" src="https://via.placeholder.com/150" alt="Demo Product 10">
-                            <div class="card-body">
-                                <h5 class="card-title">Demo Product 10</h5>
-                                <p class="card-text">Description for demo product 10.</p>
-                                <p class="card-text"><strong>Price: $109.99</strong></p>
-                                <button class="btn btn-primary">Add to Cart</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <img class="card-img-top" src="https://via.placeholder.com/150" alt="Demo Product 11">
-                            <div class="card-body">
-                                <h5 class="card-title">Demo Product 11</h5>
-                                <p class="card-text">Description for demo product 11.</p>
-                                <p class="card-text"><strong>Price: $119.99</strong></p>
-                                <button class="btn btn-primary">Add to Cart</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-  
+                  <div class="container">
+                      <div class="row scrollable-container" id="parent">
+                          <!-- Product cards will be dynamically inserted here -->
+                      </div>
+                      <div class="cart">
+                          <h4>Cart</h4>
+                          <ul id="cart">
+                              <!-- Cart items will be dynamically inserted here -->
+                          </ul>
+                      </div>
+                  </div>
               </div>
           </div>
       </div>
-  </div>
-  
-  <div id="dueModal" class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true" style="display: none;">
+   </div>
+
+
+   <div id="dueModal" class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true" style="display: none;">
       <div class="modal-dialog modal-sm">
           <div class="modal-content">
               <div class="modal-header">
@@ -1100,26 +1012,85 @@ require('./renderer.js');
     <script src="../../../static/customer/assets/plugins/onscreen-keyboard/jquery.caret.min.js"></script> -->
 
     
-    <script>
-
-    // $(function () {
-    //  "use strict";
-    //     jqKeyboard.init({
-    //         icon: "light"
-    //       });
-    //  });
- 
-
-    //  $('.holdOrderKeyboard').onscreenKeyboard({
-	//     allowTypingClass: 'holdOrderInput'
-    //   });
-
-
-    //   $('.customerOrderKeyboard').onscreenKeyboard({
-	//     allowTypingClass: 'holdCustomerOrderInput'
-    //   });
-
-     </script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    
 
   </body>
+  <script>
+    // Cart array to store products
+    let cart = [];
+
+    function addToCart(productId, productName, productPrice) {
+        const existingProduct = cart.find(item => item.id === productId);
+        if (existingProduct) {
+            existingProduct.quantity += 1;
+        } else {
+            cart.push({ id: productId, name: productName, price: productPrice, quantity: 1 });
+        }
+        updateCartDisplay();
+        console.log('Product added to cart:', productId);
+    }
+
+    function updateCartDisplay() {
+        const cartElement = $('#cart');
+        cartElement.empty(); // Clear existing cart items
+        cart.forEach((item, index) => {
+            const row = `
+                <tr>
+                    <td style="width: 5%;" >${index + 1}</td>
+                    <td style="width: 45%;">${item.name}</td>
+                    <td style="width: 15%;">${item.quantity}</td>
+                    <td style="width: 20%;">$${(item.price * item.quantity).toFixed(2)}</td>
+                    <td style="width: 15%;">
+                        <button onclick="removeFromCart(${item.id})" class="btn btn-danger btn-xs"><i class="fa fa-times"></i></button>
+                    </td>
+                </tr>
+            `;
+            cartElement.append(row);
+        });
+    }
+
+    function removeFromCart(productId) {
+        cart = cart.filter(item => item.id !== productId);
+        updateCartDisplay();
+    }
+
+    $(document).ready(function() {
+        loadProducts(); // Load products when the page is ready
+    });
+
+    function loadProducts() {
+        $.ajax({
+            url: '/pos_products', // Endpoint to fetch products
+            type: 'GET',
+            success: function(products) {
+                renderProducts(products);
+            },
+            error: function(error) {
+                console.error('Error fetching products:', error);
+            }
+        });
+    }
+
+    function renderProducts(products) {
+        const parentElement = $('#parent');
+        parentElement.empty(); // Clear existing products
+
+        products.forEach(product => {
+            const productCard = `
+                <div class="col-md-3 mb-4">
+                    <div class="card h-100">
+                        <img class="card-img-top" src="../../../static/admin/assets/images/main_img/${product.image}" alt="${product.product_name}" style="width: 100%; object-fit: cover;">
+                        <div class="card-body">
+                            <h5 class="card-title">${product.product_name}</h5>
+                            <p class="card-text">Price: $${parseFloat(product.price).toFixed(2)}</p>
+                            <button class="btn btn-primary" onclick="addToCart(${product.id}, '${product.product_name}', ${product.price})">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            parentElement.append(productCard);
+        });
+    }
+</script>
 </html>

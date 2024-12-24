@@ -181,3 +181,30 @@ def delete_product(product_id):
         connection.commit()
 
     return jsonify({'message': 'Product deleted successfully!'}), 200
+
+
+def get_db_connection():
+    engine = create_engine("mysql+mysqlconnector://root:@127.0.0.1/ppflask")
+    connection = engine.connect()
+    return connection
+
+
+@app.route('/pos_products', methods=['GET'])
+def get_products_pos():
+    with engine.connect() as connection:
+        result = connection.execute(text("SELECT * FROM products"))
+        products = result.fetchall()
+        product_list = [
+            {
+                'id': product[0],
+                'product_code': product[1],
+                'product_name': product[2],
+                'category_id': product[3],
+                'cost': product[4],
+                'price': product[5],
+                'current_stock': product[6],
+                'image': product[7]
+            }
+            for product in products
+        ]
+    return jsonify(product_list)
