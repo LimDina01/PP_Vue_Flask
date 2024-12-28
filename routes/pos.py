@@ -6,172 +6,57 @@ from werkzeug.utils import secure_filename
 import uuid
 import datetime
 from PIL import Image
+import requests
 
-# # Configuration
-# app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'static', 'admin', 'assets', 'images', 'main_img')
-# app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limit file size to 16 MB
+@app.route('/api/pay', methods=['POST'])
+def save_print():
+    data = request.get_json()
+    cart = data.get('carts', [])
+    customer_name = data.get('customerName', 'Unknown Customer')
+    phone = data.get('phone', 'No Phone Provided')
+    order_date = data.get('timestamp')
 
-# # Allowed extensions for main_img pictures
-# ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    # Prepare Telegram Message
+    customer_details = (
+        f"📅 <b>Date:</b> {order_date}\n"
+        f"👤 <b>Customer:</b>\n"
+        f"    • <b>Name:</b> {customer_name}\n"
+        f"    • <b>Phone:</b> {phone}\n"
+        f"____________________________\n"
+        f"🛒 <b>Ordered Products:</b>\n"
+    )
 
-# # Create a database engine
-# engine = create_engine("mysql+mysqlconnector://root:@127.0.0.1/ppflask")
+    full_message = customer_details
 
-# @app.route('/api/users', methods=['GET'])
-# def get_users():
-#     with engine.connect() as connection:
-#         result = connection.execute(text("SELECT * FROM users"))
-#         data = result.fetchall()
-#         user_list = [
-#             {
-#                 'id': item[0],
-#                 'username': item[1],
-#                 'gender': item[2],
-#                 'role': item[3],
-#                 'phone': item[4],
-#                 'email': item[5],
-#                 'address': item[6],
-#                 'profile_pic': item[7]
-#             }
-#             for item in data
-#         ]
-#     return jsonify(user_list)
+    for index, product in enumerate(cart, start=1):
+        product_name = product.get('product_name', 'Unknown Product')  # Safely get the product name
+        price = product.get('price', 0.0)  # Safely get the price, default to 0.0
+        quantity = product.get('quantity', 1)  # Safely get the quantity, default to 1
+        item_total = price * quantity
 
-# @app.route('/api/users', methods=['POST'])
-# def add_user():
-#     # Check if the request contains the file part
-#     if 'profilePic' not in request.files:
-#         return jsonify({'error': 'No file part'}), 400
+        product_details = (
+            f"  {index}. <b>{product_name}</b>\n"
+            f"      • <b>Product ID:</b> {product.get('id', 'N/A')}\n"  # Safely get the product ID
+            f"      • <b>Price:</b> ${price:.2f}\n"
+            f"      • <b>Quantity:</b> {quantity}\n"
+            f"      • <b>Subtotal:</b> ${(item_total):.2f}\n"
+        )
+        full_message += product_details
 
-#     file = request.files['profilePic']
-#     if file and allowed_file(file.filename):
-#         profile_pic_filename = save_profile_pic(file)
-#     else:
-#         profile_pic_filename = 'default.png'
+    full_message += f"____________________________" \
+                    f"\n💰 <b>Total Cost:</b> ${sum(item['price'] * item['quantity'] for item in cart):.2f}\n"
 
-#     # Extract other form data
-#     username = request.form.get('username')
-#     gender = request.form.get('gender')
-#     role = request.form.get('role')
-#     phone = request.form.get('phone')
-#     email = request.form.get('email')
-#     address = request.form.get('address')
+    # Send message to Telegram
+    bot_token = '7143441148:AAG1H4JXVuNJbRU5X03_GrqTpEMvDCPQoj0'
+    chat_id = '837489345'
+    
+    response = requests.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", data={
+        'chat_id': chat_id,
+        'text': full_message,
+        'parse_mode': 'HTML'
+    })
 
-#     # Validate required fields
-#     if not username or not email:
-#         return jsonify({'error': 'Username and Email are required fields.'}), 400
+    if response.status_code != 200:
+        return jsonify({'status': 'error', 'message': 'Failed to send notification to Telegram'}), 500
 
-#     query = text("""
-#         INSERT INTO `users` (username, gender, phone, email, role, address, profile_pic)
-#         VALUES (:username, :gender, :phone, :email, :role, :address, :profile_pic)
-#     """)
-
-#     with engine.connect() as connection:
-#         result = connection.execute(query, {
-#             'username': username,
-#             'gender': gender,
-#             'phone': phone,
-#             'email': email,
-#             'role': role,
-#             'address': address,
-#             'profile_pic': profile_pic_filename
-#         })
-#         connection.commit()
-
-#         # Fetch the newly created user
-#         new_user_id = result.lastrowid
-#         new_user = connection.execute(text("SELECT * FROM users WHERE id = :id"), {'id': new_user_id}).fetchone()
-
-#     return jsonify(dict(new_user._mapping)), 201
-
-# @app.route('/api/users/<int:user_id>', methods=['PUT'])
-# def update_user(user_id):
-#     # Check if the request contains the file part
-#     file = request.files.get('profilePic')
-#     if file and allowed_file(file.filename):
-#         profile_pic_filename = save_profile_pic(file)
-#     else:
-#         # Fetch the current profile picture from the database if no new file is uploaded
-#         with engine.connect() as connection:
-#             current_user = connection.execute(text("SELECT profile_pic FROM users WHERE id = :id"), {'id': user_id}).fetchone()
-#             profile_pic_filename = current_user._mapping['profile_pic'] if current_user else 'default.png'
-
-#     # Extract other form data
-#     username = request.form.get('username')
-#     gender = request.form.get('gender')
-#     role = request.form.get('role')
-#     phone = request.form.get('phone')
-#     email = request.form.get('email')
-#     address = request.form.get('address')
-
-#     # Validate required fields
-#     if not username or not email:
-#         return jsonify({'error': 'Username and Email are required fields.'}), 400
-
-#     query = text("""
-#         UPDATE `users`
-#         SET username = :username, gender = :gender, phone = :phone, email = :email, role = :role, address = :address, profile_pic = :profile_pic
-#         WHERE id = :user_id
-#     """)
-
-#     with engine.connect() as connection:
-#         connection.execute(query, {
-#             'username': username,
-#             'gender': gender,
-#             'phone': phone,
-#             'email': email,
-#             'role': role,
-#             'address': address,
-#             'profile_pic': profile_pic_filename,
-#             'user_id': user_id
-#         })
-#         connection.commit()
-
-#         # Fetch the updated user
-#         updated_user = connection.execute(text("SELECT * FROM users WHERE id = :id"), {'id': user_id}).fetchone()
-
-#     return jsonify(dict(updated_user._mapping)), 200
-
-# @app.route('/api/users/<int:user_id>', methods=['DELETE'])
-# def delete_user(user_id):
-#     query = text("DELETE FROM `users` WHERE `id` = :user_id")
-
-#     with engine.connect() as connection:
-#         connection.execute(query, {"user_id": user_id})
-#         connection.commit()
-
-#     return jsonify({"message": "User deleted successfully!"}), 200
-
-# def allowed_file(filename):
-#     """Check if the file has an allowed extension."""
-#     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-# def save_profile_pic(file):
-#     """Save the uploaded image and return the filename."""
-#     if not os.path.exists(app.config['UPLOAD_FOLDER']):
-#         os.makedirs(app.config['UPLOAD_FOLDER'])
-
-#     sub_img_folder = os.path.join(os.getcwd(), 'static', 'admin', 'assets', 'images', 'sub_img')
-#     if not os.path.exists(sub_img_folder):
-#         os.makedirs(sub_img_folder)
-
-#     # Generate unique filename
-#     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-#     original_filename = secure_filename(file.filename)
-#     ext = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else 'jpg'
-#     unique_filename = f"{timestamp}_{uuid.uuid4().hex}.{ext}"
-
-#     # Save main image
-#     file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-#     file.save(file_path)
-
-#     # Create thumbnail for sub_img
-#     with Image.open(file_path) as img:
-#         # Save thumbnail
-#         sub_img_path = os.path.join(sub_img_folder, unique_filename)
-#         # Create a copy before saving to avoid potential closed file issues
-#         img_copy = img.copy()
-#         img_copy.thumbnail((100, 100))  # Adjust size as needed
-#         img_copy.save(sub_img_path, optimize=True, quality=70)
-
-#     return unique_filename
+    return jsonify({'status': 'success'}), 201
