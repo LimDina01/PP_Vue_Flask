@@ -1,4 +1,4 @@
-from flask import request, jsonify
+from flask import request, jsonify, session, redirect, url_for
 from app import app
 from sqlalchemy import create_engine, text
 import os
@@ -6,6 +6,9 @@ from werkzeug.utils import secure_filename
 import uuid
 import datetime
 from PIL import Image
+import bcrypt  # Import bcrypt for password hashing
+from functools import wraps  # Import wraps to preserve function metadata
+from sqlalchemy.engine import Row  # Import Row for named access
 
 # Configuration
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'static', 'admin', 'assets', 'images', 'main_img')
@@ -16,6 +19,24 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 # Create a database engine
 engine = create_engine("mysql+mysqlconnector://root:@127.0.0.1/ppflask")
+
+def admin_required(f):
+    """Decorator to check if the user is an admin."""
+    @wraps(f)  # Preserve the original function's metadata
+    def wrapper(*args, **kwargs):
+        if 'user_id' not in session or not is_admin(session['user_id']):
+            
+            return jsonify({'error': 'Access denied. Admins only.'}), 403
+        return f(*args, **kwargs)
+    return wrapper
+
+
+
+def is_admin(user_id):
+    """Check if the user is an admin based on their role."""
+    with engine.connect() as connection:
+        result = connection.execute(text("SELECT role FROM users WHERE id = :id"), {'id': user_id}).fetchone()
+        return result is not None and result[0] == 'Admin'  # Access by index
 
 @app.route('/api/users', methods=['GET'])
 def get_users():
@@ -31,7 +52,8 @@ def get_users():
                 'phone': item[4],
                 'email': item[5],
                 'address': item[6],
-                'profile_pic': item[7]
+                'profile_pic': item[7],
+                # Do not return the password for security reasons
             }
             for item in data
         ]
@@ -56,14 +78,22 @@ def add_user():
     phone = request.form.get('phone')
     email = request.form.get('email')
     address = request.form.get('address')
+    password = request.form.get('password')
 
     # Validate required fields
     if not username or not email:
         return jsonify({'error': 'Username and Email are required fields.'}), 400
+    if not password:
+        return jsonify({'error': 'Password required fields.'}), 400
+    if not role:
+        return jsonify({'error': 'Role required fields.'}), 400
+
+    # Hash the password using bcrypt
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
     query = text("""
-        INSERT INTO `users` (username, gender, phone, email, role, address, profile_pic)
-        VALUES (:username, :gender, :phone, :email, :role, :address, :profile_pic)
+        INSERT INTO `users` (username, gender, phone, email, role, address, profile_pic, password)
+        VALUES (:username, :gender, :phone, :email, :role, :address, :profile_pic, :password)
     """)
 
     with engine.connect() as connection:
@@ -74,7 +104,8 @@ def add_user():
             'email': email,
             'role': role,
             'address': address,
-            'profile_pic': profile_pic_filename
+            'profile_pic': profile_pic_filename,
+            'password': hashed_password  # Store the hashed password
         })
         connection.commit()
 
@@ -85,6 +116,7 @@ def add_user():
     return jsonify(dict(new_user._mapping)), 201
 
 @app.route('/api/users/<int:user_id>', methods=['PUT'])
+@admin_required
 def update_user(user_id):
     # Check if the request contains the file part
     file = request.files.get('profilePic')
@@ -103,14 +135,22 @@ def update_user(user_id):
     phone = request.form.get('phone')
     email = request.form.get('email')
     address = request.form.get('address')
+    password = request.form.get('password')
 
     # Validate required fields
     if not username or not email:
         return jsonify({'error': 'Username and Email are required fields.'}), 400
+    if not password:
+        return jsonify({'error': 'Password required fields.'}), 400
+    if not role:
+        return jsonify({'error': 'Role required fields.'}), 400
+
+    # Hash the password if it is provided
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
     query = text("""
         UPDATE `users`
-        SET username = :username, gender = :gender, phone = :phone, email = :email, role = :role, address = :address, profile_pic = :profile_pic
+        SET username = :username, gender = :gender, phone = :phone, email = :email, role = :role, address = :address, profile_pic = :profile_pic, password = :password
         WHERE id = :user_id
     """)
 
@@ -123,6 +163,7 @@ def update_user(user_id):
             'role': role,
             'address': address,
             'profile_pic': profile_pic_filename,
+            'password': hashed_password,  # Store the hashed password
             'user_id': user_id
         })
         connection.commit()
@@ -133,6 +174,7 @@ def update_user(user_id):
     return jsonify(dict(updated_user._mapping)), 200
 
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
+@admin_required
 def delete_user(user_id):
     query = text("DELETE FROM `users` WHERE `id` = :user_id")
 
@@ -175,3 +217,36 @@ def save_profile_pic(file):
         img_copy.save(sub_img_path, optimize=True, quality=70)
 
     return unique_filename
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    username_or_email = request.form.get('username')
+    password = request.form.get('password')
+
+    # Validate inputs
+    if not username_or_email or not password:
+        return jsonify({'error': 'Username/Email and Password are required!'}), 400
+
+    query = text("SELECT * FROM `users` WHERE `username` = :username_or_email OR `email` = :username_or_email")
+    with engine.connect() as connection:
+        user = connection.execute(query, {'username_or_email': username_or_email}).fetchone()
+
+    # Check if user exists
+    if user is None:
+        return jsonify({'error': 'Invalid credentials!'}), 401
+
+    # Print username and password for debugging (not recommended for production)
+    print(f"Username: {user[1]}")  # Adjust index based on your table structure
+    print(f"Password: {user[8]}")  # Adjust index based on your table structure
+
+    # Verify password
+    user_password = user[8]  # Assuming the password is at index 3
+    if not bcrypt.checkpw(password.encode('utf-8'), user_password.encode('utf-8')):
+        return jsonify({'error': 'Invalid credentials!'}), 401
+
+    # Create session
+    session['user_id'] = user[0]  # Assuming the first index is user ID
+    session['username'] = user[1]  # Assuming the second index is username
+
+    # Respond with success
+    return jsonify({'message': 'Login successful!'}), 200
