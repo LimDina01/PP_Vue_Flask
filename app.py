@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, jsonify, abort
+from flask import Flask, render_template, request, jsonify, abort, url_for, redirect
 from flask_sqlalchemy import SQLAlchemy
 import os
 from werkzeug.utils import secure_filename
 import uuid
 import datetime
+from functools import wraps
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -24,26 +25,38 @@ db = SQLAlchemy(app)
 from routes.user import *  # Import everything from user.py
 from routes.category import *  # Import everything from category.py
 
+def login_required(f):
+    """Decorator to check if the user is logged in."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login_page'))  # Redirect to login page
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/admin')
+@login_required
 @admin_required
 def hello_world():  
     return render_template('admin/index.html')
 
 
 @app.route('/admin/user')
+@login_required
 @admin_required
 def user():
     return render_template('admin/user.html')
 
 
 @app.route('/admin/category')
+@login_required
 @admin_required
 def category():
     return render_template('admin/category.html')
 
 
 @app.route('/admin/product')
+@login_required
 @admin_required
 def product():
     return render_template('admin/product.html')
@@ -52,14 +65,25 @@ def product():
 # =========================================================
 
 @app.route('/customer/index')
+@login_required
 def customer():
     return render_template('customer/index.html')
 
 # =========================================================
 
-@app.route('/')
+@app.route('/login')
 def login_page():
     return render_template('login/login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect("/login")
+    # return jsonify({'message': 'Logged out successfully!'}), 200
+
+@app.route('/')
+def default():
+    return redirect(url_for('login'))
 
 
 if __name__ == '__main__':

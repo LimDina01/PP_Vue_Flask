@@ -12,8 +12,8 @@ import requests
 def save_print():
     data = request.get_json()
     cart = data.get('carts', [])
-    customer_name = data.get('customerName', 'Unknown Customer')
-    phone = data.get('phone', 'No Phone Provided')
+    user_name = data.get('customerName', 'Unknown Customer')
+    user_id = data.get('userId', 'Unknown id')
     order_date = data.get('timestamp')
     
     # Convert received_amount to float
@@ -40,9 +40,10 @@ def save_print():
     # Prepare Telegram Message
     customer_details = (
         f"📅 <b>Date:</b> {order_date}\n"
-        f"👤 <b>Customer:</b>\n"
-        f"    • <b>Name:</b> {customer_name}\n"
-        f"    • <b>Phone:</b> {phone}\n"
+        f"👤 <b>User:</b>\n"
+        f"    • <b>ID  :</b> {user_id}\n"
+        f"    • <b>Name:</b> {user_name}\n"
+        f"    • <b>Role:</b> {user_name}\n"
         f"____________________________\n"
         f"🛒 <b>Ordered Products:</b>\n"
     )
@@ -64,9 +65,9 @@ def save_print():
         )
         full_message += product_details
     full_message += f"____________________________" \
-                    f"\n🏛️<b> After Tax:</b> ${total_cost:.2f}\n" \
+                    f"\n💲 <b>Total Cost:</b> ${total_cost_before_discount:.2f}\n" \
                     f"🎉 <b>Discount:</b> {discount}%\n"\
-                    f"💲 <b>Total Cost:</b> ${total_cost:.2f}\n" \
+                    f"🏛️ <b>Total w/10% Tax:</b> ${total_cost:.2f}\n" \
                     f"💵 <b>Received Amount:</b> ${received_amount:.2f}\n" \
                     f"💰 <b>Change:</b> ${change:.2f}\n" \
                       # Add discount percentage to the message

@@ -208,3 +208,60 @@ def get_products_pos():
             for product in products
         ]
     return jsonify(product_list)
+
+
+@app.route('/api/sales', methods=['POST'])
+def create_sale():
+    data = request.get_json()
+
+    # Extract sale items
+    sale_items = data.get('saleItems', [])
+    total_amount = data.get('totalAmount')
+    received_amount = data.get('receivedAmount')
+    user_id = data.get('userId', 'Unknown id')  
+    transaction_date = datetime.datetime.now()
+    full_price = data.get('price', 0.0) 
+    discount = data.get('discount', 0.0)  # Extract discount value
+
+    # Generate a unique reference code for the sale
+    ref_code = str(uuid.uuid4())
+
+    # Insert the sale into the sales table
+    insert_sale_query = text(""" 
+        INSERT INTO sales (ref_code, total_amount, amount_after_tax, received_amount, discount, user_id, transaction_date)
+        VALUES (:ref_code, :total_amount, :amount_after_tax, :received_amount, :discount, :user_id, :transaction_date)
+    """)
+
+    with engine.connect() as connection:
+        # Start a transaction
+        with connection.begin():
+            connection.execute(insert_sale_query, {
+                'ref_code': ref_code,
+                'total_amount': full_price,
+                'amount_after_tax': total_amount,
+                'received_amount': received_amount,
+                'discount': discount,
+                'user_id': user_id,
+                'transaction_date': transaction_date,
+
+            })
+
+            # Get the last inserted sale ID
+            sale_id = connection.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+
+            # Insert sale items into the sale_items table
+            insert_sale_item_query = text("""
+                INSERT INTO sale_items (product_id, product_name, price, quantity)
+                VALUES (:product_id, :product_name, :price, :quantity)
+            """)
+
+            for item in sale_items:
+                # Directly execute the insert query without checking for keys
+                connection.execute(insert_sale_item_query, {
+                    'product_id': item['id'],  # Ensure this key exists in the incoming data
+                    'product_name': item['product_name'],  # Ensure this key exists in the incoming data
+                    'price': item['price'],  # Ensure this key exists in the incoming data
+                    'quantity': item['quantity'],  # Ensure this key exists in the incoming data
+                })
+
+    return jsonify({'message': 'Sale recorded successfully!', 'sale_id': sale_id}), 201

@@ -235,10 +235,6 @@ def login():
     if user is None:
         return jsonify({'error': 'Invalid credentials!'}), 401
 
-    # Print username and password for debugging (not recommended for production)
-    print(f"Username: {user[1]}")  # Adjust index based on your table structure
-    print(f"Password: {user[8]}")  # Adjust index based on your table structure
-
     # Verify password
     user_password = user[8]  # Assuming the password is at index 3
     if not bcrypt.checkpw(password.encode('utf-8'), user_password.encode('utf-8')):
@@ -247,6 +243,20 @@ def login():
     # Create session
     session['user_id'] = user[0]  # Assuming the first index is user ID
     session['username'] = user[1]  # Assuming the second index is username
+    
 
     # Respond with success
     return jsonify({'message': 'Login successful!'}), 200
+
+@app.route('/api/current_user', methods=['GET'])
+def current_user():
+    if 'user_id' not in session:
+        return jsonify({'error': 'User not logged in'}), 401
+
+    # Log session information for debugging
+    print(f"Current user: user_id={session['user_id']}, username={session['username']}")
+
+    return jsonify({
+        'id': session['user_id'],
+        'username': session['username']
+    }), 200

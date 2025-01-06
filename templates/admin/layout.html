@@ -185,7 +185,7 @@
                     </div>
                   </a>
                   <div class="dropdown-divider"></div>
-                  <a class="dropdown-item preview-item">
+                  <a class="dropdown-item preview-item" href="#" onclick="confirmLogout(event)">
                     <div class="preview-thumbnail">
                       <div class="preview-icon bg-dark rounded-circle">
                         <i class="mdi mdi-logout text-danger"></i>
@@ -253,5 +253,27 @@
 {% include "admin/layouts/plugin.html" %}
 
 <!-- End custom js for this page -->
+
+<script>
+    function confirmLogout(event) {
+        event.preventDefault(); // Prevent the default link behavior
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You will be logged out!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, log me out!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // If confirmed, redirect to the logout URL
+                window.location.href = '/logout';
+            }
+        });
+    }
+</script>
 </body>
 </html>
