@@ -62,6 +62,12 @@ def product():
     return render_template('admin/product.html')
 
 
+@app.route('/admin/sale')
+@login_required
+@admin_required
+def sale():
+    return render_template('admin/sale.html')
+
 # =========================================================
 
 @app.route('/customer/index')
@@ -83,7 +89,7 @@ def logout():
 
 @app.route('/')
 def default():
-    return redirect(url_for('login'))
+    return redirect(url_for('customer'))
 
 
 if __name__ == '__main__':

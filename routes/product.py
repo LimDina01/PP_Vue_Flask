@@ -243,25 +243,74 @@ def create_sale():
                 'discount': discount,
                 'user_id': user_id,
                 'transaction_date': transaction_date,
-
             })
 
             # Get the last inserted sale ID
             sale_id = connection.execute(text("SELECT LAST_INSERT_ID()")).scalar()
 
             # Insert sale items into the sale_items table
-            insert_sale_item_query = text("""
-                INSERT INTO sale_items (product_id, product_name, price, quantity)
-                VALUES (:product_id, :product_name, :price, :quantity)
+            insert_sale_item_query = text(""" 
+                INSERT INTO sale_items (sales_id, product_id, product_name, price, quantity)
+                VALUES (:sales_id, :product_id, :product_name, :price, :quantity)
             """)
 
             for item in sale_items:
                 # Directly execute the insert query without checking for keys
                 connection.execute(insert_sale_item_query, {
-                    'product_id': item['id'],  # Ensure this key exists in the incoming data
-                    'product_name': item['product_name'],  # Ensure this key exists in the incoming data
-                    'price': item['price'],  # Ensure this key exists in the incoming data
-                    'quantity': item['quantity'],  # Ensure this key exists in the incoming data
+                    'sales_id': sale_id,
+                    'product_id': item['id'],
+                    'product_name': item['product_name'],
+                    'price': item['price'],
+                    'quantity': item['quantity'],
                 })
 
     return jsonify({'message': 'Sale recorded successfully!', 'sale_id': sale_id}), 201
+
+
+@app.route('/api/sales', methods=['GET'])
+def get_sales():
+    with engine.connect() as connection:
+        result = connection.execute(text("SELECT * FROM sales"))
+        sales = result.fetchall()
+        sales_list = [
+            {
+                'id': sale[0],
+                'ref_code': sale[1],
+                'total_amount': sale[2],
+                'amount_after_tax': sale[3],
+                'received_amount': sale[4],
+                'discount': sale[5],
+                'user_id': sale[6],
+                'transaction_date': sale[7]
+            }
+            for sale in sales
+        ]
+
+    return jsonify(sales_list)
+
+
+@app.route('/api/sales/<int:sale_id>', methods=['GET'])
+def get_sale_details(sale_id):
+    with engine.connect() as connection:
+        # Fetch the sale details
+        sale_query = text("SELECT * FROM sales WHERE id = :sale_id")
+        sale = connection.execute(sale_query, {'sale_id': sale_id}).fetchone()
+
+        # Fetch the sale items
+        items_query = text("SELECT * FROM sale_items WHERE sales_id = :sale_id")
+        items = connection.execute(items_query, {'sale_id': sale_id}).fetchall()
+
+        # Prepare the response
+        sale_details = {
+            'id': sale[0],
+            'ref_code': sale[1],
+            'total_amount': sale[2],
+            'amount_after_tax': sale[3],
+            'received_amount': sale[4],
+            'discount': sale[5],
+            'user_id': sale[6],
+            'transaction_date': sale[7],
+            'items': [{'id': item[0], 'product_name': item[2], 'quantity': item[3], 'price': item[4]} for item in items]  # Adjust indices based on your table structure
+        }
+
+    return jsonify(sale_details)

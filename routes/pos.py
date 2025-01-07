@@ -43,7 +43,6 @@ def save_print():
         f"👤 <b>User:</b>\n"
         f"    • <b>ID  :</b> {user_id}\n"
         f"    • <b>Name:</b> {user_name}\n"
-        f"    • <b>Role:</b> {user_name}\n"
         f"____________________________\n"
         f"🛒 <b>Ordered Products:</b>\n"
     )

@@ -1,365 +1,163 @@
 {% extends "admin/layout.html" %}
 
 {% block main_content %}
-    <div id="app">
-        <div class="container">
-            <h1 class="text-center my-4">Category Management</h1>
+<div id="app">
+    <div class="container">
+        <h1 class="text-center my-4">Sales Management</h1>
 
-            <button @click="openAddCategoryModal" class="btn btn-primary mb-3">Add Category</button>
+        <!-- Search Box -->
+        <div class="form-group">
+            <label for="searchInput">Search:</label>
+            <input type="text" id="searchInput" v-model="searchQuery" class="form-control" placeholder="Enter reference code or user ID">
+        </div>
 
-            <table class="table table-bordered">
-                <thead class="thead-dark">
-                <tr>
-                    <th scope="col">No.</th>
-                    <th scope="col">Category Name</th>
-                    <th scope="col">Description</th>
-                    <th scope="col">Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr v-for="(category, index) in categories" :key="category.id">
-                    <td>[[ index + 1 ]]</td>
-                    <td>[[ category.name ]]</td>
-                    <td>[[ category.description ]]</td>
-                    <td>
-                        <button @click="openEditCategoryModal(category)" class="btn btn-sm btn-warning">Edit</button>
-                        <button @click="deleteCategory(category)" class="btn btn-sm btn-danger">Delete</button>
-                    </td>
-                </tr>
-                <tr v-if="categories.length === 0">
-                    <td colspan="4" class="text-center">No categories found.</td>
-                </tr>
-                </tbody>
-            </table>
+        <!-- Sales Table -->
+        <table class="table table-bordered">
+            <thead class="thead-dark">
+            <tr>
+                <th scope="col">Sale ID</th>
+                <th scope="col">Reference Code</th>
+                <th scope="col">Total Amount</th>
+                <th scope="col">Received Amount</th>
+                <th scope="col">Discount</th>
+                <th scope="col">User ID</th>
+                <th scope="col">Transaction Date</th>
+                <th scope="col">Action</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="sale in filteredSales" :key="sale.id">
+                <td>[[ sale.id ]]</td>
+                <td>[[ sale.ref_code ]]</td>
+                <td>[[ sale.total_amount ]]</td>
+                <td>[[ sale.received_amount ]]</td>
+                <td>[[ sale.discount ]]</td>
+                <td>[[ sale.user_id ]]</td>
+                <td>[[ formatDate(sale.transaction_date) ]]</td>
+                <td>
+                    <button @click="showSaleDetails(sale.id)" class="btn btn-info">View Details</button>
+                </td>
+            </tr>
+            <tr v-if="filteredSales.length === 0">
+                <td colspan="8" class="text-center">No sales found.</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
 
-            <!-- Modal for Add/Edit Category -->
-            <div v-if="showCategoryModal" class="modal-backdrop">
-                <div class="modal-content">
-                    <div class="modal-header">
-
-                        <h5 class="modal-title font-weight-bold w-100 text-center py-2" style="font-size: 1.5rem;">[[
-                            isEditMode ? 'Edit Category' : 'Add Category' ]]</h5>
-
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label for="categoryName">Category Name</label>
-                            <input type="text" class="form-control" v-model="categoryForm.name"
-                                   placeholder="Enter category name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="categoryDescription">Description</label>
-                            <textarea class="form-control" v-model="categoryForm.description"
-                                      placeholder="Enter category description" required></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer d-flex justify-content-between">
-                        <button type="button" class="btn btn-secondary align-left" @click="closeCategoryModal">Close
-                        </button>
-
-                        <button type="button" class="btn btn-primary"
-                                @click="isEditMode ? updateCategory() : addCategory()">
-                            [[ isEditMode ? 'Update Category' : 'Add Category' ]]
-                        </button>
-                    </div>
-                </div>
+    <!-- Vue.js Modal -->
+    <div v-if="showModal" class="modal-overlay">
+        <div class="modal-content">
+            <h5>Sale Details</h5>
+            <div v-if="saleDetails">
+                <p><strong>Sale ID:</strong> [[ saleDetails.id ]]</p>
+                <p><strong>Reference Code:</strong> [[ saleDetails.ref_code ]]</p>
+                <p><strong>Total Amount:</strong> [[ saleDetails.total_amount ]]</p>
+                <p><strong>Received Amount:</strong> [[ saleDetails.received_amount ]]</p>
+                <p><strong>Discount:</strong> [[ saleDetails.discount ]]</p>
+                <p><strong>User ID:</strong> [[ saleDetails.user_id ]]</p>
+                <p><strong>Transaction Date:</strong> [[ formatDate(saleDetails.transaction_date) ]]</p>
+                <h6>Sale Items:</h6>
+                <ul>
+                    <li v-for="item in saleDetails.items" :key="item.id">
+                        [[ item.product_name ]] - Quantity: [[ item.quantity ]] - Price: [[ item.price ]]
+                    </li>
+                </ul>
             </div>
+            <div v-else>
+                <p>Loading sale details...</p>
+            </div>
+            <button @click="showModal = false" class="btn btn-secondary">Close</button>
         </div>
     </div>
+</div>
 
-    <!-- Include Vue.js -->
-    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
-    <!-- Include SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Include SweetAlert2 Dark Theme -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.css">
-    <!-- Include Font Awesome for Icons -->
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<!-- Vue.js and JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
 
-    <!-- Custom CSS for modal and table -->
-    <style>
-        .modal-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
-
-        .modal-content {
-            background-color: #1a1c24;
-            padding: 20px;
-            border-radius: 5px;
-            width: 500px;
-            max-width: 90%;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .close {
-            cursor: pointer;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-        }
-
-        .thead-dark th {
-            background-color: #343a40;
-            color: white;
-        }
-
-        .form-control {
-            background-color: #343a40; /* Dark background */
-            color: #ffffff; /* Black text */
-            border: 1px solid #495057; /* Darker border */
-            padding: 10px;
-            border-radius: 4px;
-            transition: background-color 0.3s ease;
-        }
-
-        .form-control:focus {
-            background-color: #23272b; /* Slightly darker background on focus */
-            border-color: #6c757d; /* Lighter border when focused */
-            outline: none; /* Remove default outline */
-        }
-    </style>
-
-    <script>
-        new Vue({
-            el: '#app',
-            delimiters: ['[[', ']]'],  // Change delimiters to avoid conflict
-            data() {
-                return {
-                    categories: [],  // Array to hold categories fetched from API
-                    showCategoryModal: false,  // Modal toggle
-                    isEditMode: false,  // Flag to determine if modal is in edit mode
-                    categoryForm: {  // Form data for add/edit
-                        id: null,  // Only used in edit mode
-                        name: '',
-                        description: ''
-                    },
-                    categoryToEdit: null  // Holds the category being edited
-                }
-            },
-            created() {
-                // Fetch categories when the component is created
-                this.fetchCategories();
-            },
-            methods: {
-                fetchCategories() {
-                    fetch('/api/categories')
-                        .then(response => response.json())
-                        .then(data => {
-                            this.categories = data;
-                            console.log(this.categories); // Populate categories from API
-                        })
-                        .catch(error => {
-                            console.error('Error fetching categories:', error);
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: 'Failed to fetch categories.',
-                                customClass: {
-                                    popup: 'swal2-dark'
-                                }
-                            });
-                        });
-                },
-                openAddCategoryModal() {
-                    this.isEditMode = false;
-                    this.resetCategoryForm();
-                    this.showCategoryModal = true;
-                },
-                openEditCategoryModal(category) {
-                    this.isEditMode = true;
-                    this.categoryToEdit = category;
-                    this.categoryForm = {
-                        id: category.id,  // Assuming each category has a unique 'id'
-                        name: category.name,
-                        description: category.description
-                    };
-                    this.showCategoryModal = true;
-                },
-                closeCategoryModal() {
-                    this.showCategoryModal = false;
-                    this.resetCategoryForm();
-                },
-                addCategory() {
-                    const formData = new FormData();
-                    formData.append('name', this.categoryForm.name);
-                    formData.append('description', this.categoryForm.description);
-
-                    fetch('/api/categories', {
-                        method: 'POST',
-                        body: formData
+<script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-loading-overlay/2.1.7/loadingoverlay.min.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        delimiters: ['[[', ']]'],
+        data() {
+            return {
+                sales: [],
+                saleDetails: null,
+                searchQuery: '',
+                showModal: false
+            };
+        },
+        created() {
+            this.fetchSales();
+        },
+        computed: {
+            filteredSales() {
+                const query = this.searchQuery.toLowerCase();
+                return this.sales.filter(sale =>
+                    sale.ref_code.toLowerCase().includes(query) ||
+                    sale.user_id.toString().includes(query)
+                );
+            }
+        },
+        methods: {
+            fetchSales() {
+                $.LoadingOverlay("show")
+                fetch('/api/sales')
+                    .then(response => response.json())
+                    .then(data => {
+                        this.sales = data;
                     })
-                        .then(response => {
-                            if (response.ok) {
-                                return response.json();
-                            } else {
-                                return response.json().then(err => {
-                                    throw err;
-                                });
-                            }
-                        })
-                        .then(newCategory => {
-                            this.categories.push(newCategory);
-                            this.showCategoryModal = false;
-                            this.resetCategoryForm();
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Category added successfully!',
-                                showConfirmButton: false,
-                                timer: 1500,
-                                customClass: {
-                                    popup: 'swal2-dark'
-                                }
-                            });
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Failed to add category.',
-                                text: error.error || 'An error occurred while adding the category.',
-                                customClass: {
-                                    popup: 'swal2-dark'
-                                }
-                            });
-                        });
-                },
+                    $.LoadingOverlay("hide")
 
-                updateCategory() {
-                    if (!this.categoryForm.id) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Category ID is missing.',
-                            customClass: {
-                                popup: 'swal2-dark'
-                            }
-                        });
-                        return;
-                    }
-
-                    const formData = new FormData();
-                    formData.append('name', this.categoryForm.name);
-                    formData.append('description', this.categoryForm.description);
-
-                    fetch(`/api/categories/${this.categoryForm.id}`, {
-                        method: 'PUT',
-                        body: formData
-                    })
-                        .then(response => {
-                            if (response.ok) {
-                                return response.json();
-                            } else {
-                                return response.json().then(err => {
-                                    throw err;
-                                });
-                            }
-                        })
-                        .then(updatedCategory => {
-                            const index = this.categories.findIndex(category => category.id === updatedCategory.id);
-                            if (index !== -1) {
-                                this.$set(this.categories, index, updatedCategory);
-                            }
-                            this.showCategoryModal = false;
-                            this.resetCategoryForm();
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Category updated successfully!',
-                                showConfirmButton: false,
-                                timer: 1500,
-                                customClass: {
-                                    popup: 'swal2-dark'
-                                }
-                            });
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Failed to update category.',
-                                text: error.error || 'An error occurred while updating the category.',
-                                customClass: {
-                                    popup: 'swal2-dark'
-                                }
-                            });
-                        });
-                },
-
-                deleteCategory(category) {
-                    Swal.fire({
-                        title: `Are you sure you want to delete "${category.name}"?`,
-                        text: "This action cannot be undone.",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#3085d6',
-                        cancelButtonColor: '#d33',
-                        confirmButtonText: 'Yes, delete it!',
-                        customClass: {
-                            popup: 'swal2-dark'
-                        }
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            fetch(`/api/categories/${category.id}`, {
-                                method: 'DELETE'
-                            })
-                                .then(response => {
-                                    if (response.ok) {
-                                        // Remove the category from the categories array
-                                        this.categories = this.categories.filter(c => c.id !== category.id);
-                                        Swal.fire({
-                                            icon: 'success',
-                                            title: 'Category deleted successfully!',
-                                            showConfirmButton: false,
-                                            timer: 1500,
-                                            customClass: {
-                                                popup: 'swal2-dark'
-                                            }
-                                        });
-                                    } else {
-                                        return response.json().then(err => {
-                                            throw err;
-                                        });
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error('Error:', error);
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Failed to delete category.',
-                                        text: error.error || 'An error occurred while deleting the category.',
-                                        customClass: {
-                                            popup: 'swal2-dark'
-                                        }
-                                    });
-                                });
-                        }
+                    .catch(error => {
+                        console.error('Error fetching sales:', error);
+                        alert('Failed to load sales.');
                     });
-                },
-                resetCategoryForm() {
-                    // Reset category form fields
-                    this.categoryForm = {
-                        id: null,
-                        name: '',
-                        description: ''
-                    };
-                    this.categoryToEdit = null;
-                }
             },
-        });
-    </script>
-    </div>
+            showSaleDetails(saleId) {
+                this.showModal = true;
+                fetch(`/api/sales/${saleId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        this.saleDetails = data;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching sale details:', error);
+                        alert('Failed to load sale details.');
+                    });
+            },
+            formatDate(date) {
+                const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                return new Date(date).toLocaleDateString('en-US', options);
+            }
+        }
+    });
+</script>
+
+<!-- Modal Styling -->
+<style>
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background: #000000;
+        padding: 20px;
+        border-radius: 8px;
+        width: 400px;
+        max-width: 90%;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+</style>
 {% endblock %}

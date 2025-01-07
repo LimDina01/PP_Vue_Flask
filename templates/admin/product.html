@@ -157,6 +157,9 @@
     <!-- Add Cropper.js JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
 
+    <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-loading-overlay/2.1.7/loadingoverlay.min.js"></script>
+
     <!-- Custom CSS for modal and table -->
     <style>
         .modal-backdrop {
@@ -311,11 +314,14 @@
                         });
                 },
                 fetchCategories() {
+                    $.LoadingOverlay("show")
                     fetch('/api/categories')
                         .then(response => response.json())
                         .then(data => {
                             this.categories = data;
+                            
                         })
+                        $.LoadingOverlay("hide")
                         .catch(error => {
                             console.error('Error fetching categories:', error);
                             Swal.fire({
